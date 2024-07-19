@@ -8,7 +8,7 @@ import (
 )
 
 func replRead(str string) (Expr, error) {
-	return Read_str(str)
+	return readExpr(str)
 }
 
 func replEval(expr Expr, env *Env) (Expr, error) {
@@ -21,7 +21,7 @@ func replPrint(expr Expr) string {
 
 func repl(str string) (string, error) {
 	expr, err := replRead(str)
-	if err != nil {
+	if err != nil || expr == nil {
 		return "", err
 	}
 	expr, err = replEval(expr, &repl_env)
@@ -39,8 +39,8 @@ func main() {
 		input := strings.TrimSpace(readln.Text())
 		output, err := repl(input)
 		if err != nil {
-			os.Stderr.WriteString(err.Error())
-		} else {
+			os.Stderr.WriteString(err.Error() + "\n")
+		} else if output != "" {
 			fmt.Println(output)
 		}
 		fmt.Print("\nrepl> ")

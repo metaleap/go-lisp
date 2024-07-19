@@ -10,108 +10,96 @@ type Expr interface {
 	isExpr()
 }
 
-func (Ident) isExpr()   {}
-func (Keyword) isExpr() {}
-func (Str) isExpr()     {}
-func (Num) isExpr()     {}
-func (Func) isExpr()    {}
-func (List) isExpr()    {}
-func (Vec) isExpr()     {}
-func (HashMap) isExpr() {}
+func (ExprIdent) isExpr()   {}
+func (ExprKeyword) isExpr() {}
+func (ExprStr) isExpr()     {}
+func (ExprNum) isExpr()     {}
+func (ExprFunc) isExpr()    {}
+func (ExprList) isExpr()    {}
+func (ExprVec) isExpr()     {}
+func (ExprHashMap) isExpr() {}
 
 // Scalars
 
-type Ident string
+type ExprIdent string
 
-func isIdent(obj Expr) bool {
-	_, ok := obj.(Ident)
+func isIdent(expr Expr) bool {
+	_, ok := expr.(ExprIdent)
 	return ok
 }
 
-func (me Ident) isNil() bool {
+func (me ExprIdent) isNil() bool {
 	return string(me) == "nil"
 }
-func (me Ident) isTrue() bool {
+func (me ExprIdent) isTrue() bool {
 	return string(me) == "true"
 }
-func (me Ident) isFalse() bool {
+func (me ExprIdent) isFalse() bool {
 	return string(me) == "false"
 }
 
-type Num int
+type ExprNum int
 
-func isNum(obj Expr) bool {
-	_, ok := obj.(Num)
+func isNum(expr Expr) bool {
+	_, ok := expr.(ExprNum)
 	return ok
 }
 
-type Keyword string
+type ExprKeyword string
 
-func isKeyword(obj Expr) bool {
-	_, ok := obj.(Keyword)
+func isKeyword(expr Expr) bool {
+	_, ok := expr.(ExprKeyword)
 	return ok
 }
 
-type Str string
+type ExprStr string
 
-func isString(obj Expr) bool {
-	_, ok := obj.(Str)
+func isString(expr Expr) bool {
+	_, ok := expr.(ExprStr)
 	return ok
 }
 
 // Functions
-type Func struct {
-	Fn   func([]Expr) (Expr, error)
-	Meta Expr
-}
+type ExprFunc func([]Expr) (Expr, error)
 
-func isFunc(obj Expr) bool {
-	_, ok := obj.(Func)
+func isFunc(expr Expr) bool {
+	_, ok := expr.(ExprFunc)
 	return ok
 }
 
 // Lists
-type List struct {
-	List []Expr
-	Meta Expr
+type ExprList []Expr
+
+func newList(exprs ...Expr) Expr {
+	return ExprList(exprs)
 }
 
-func newList(a ...Expr) Expr {
-	return List{a, nil}
-}
-
-func isList(obj Expr) bool {
-	_, ok := obj.(List)
+func isList(expr Expr) bool {
+	_, ok := expr.(ExprList)
 	return ok
 }
 
 // Vectors
-type Vec struct {
-	List []Expr
-	Meta Expr
-}
+type ExprVec []Expr
 
-func isVec(obj Expr) bool {
-	_, ok := obj.(Vec)
+func isVec(expr Expr) bool {
+	_, ok := expr.(ExprVec)
 	return ok
 }
 
-func getSlice(seq Expr) ([]Expr, error) {
-	switch obj := seq.(type) {
-	case List:
-		return obj.List, nil
-	case Vec:
-		return obj.List, nil
+func getSlice(expr Expr) ([]Expr, error) {
+	switch expr := expr.(type) {
+	case ExprList:
+		return ([]Expr)(expr), nil
+	case ExprVec:
+		return ([]Expr)(expr), nil
 	default:
-		return nil, errors.New("GetSlice called on non-sequence")
+		return nil, errors.New("getSlice called on non-sequence")
 	}
 }
 
 // Hash Maps
-type HashMap struct {
-	Map  map[Str]Expr
-	Meta Expr
-}
+type ExprHashMap map[ExprStr]Expr
 
 func newHashMap(seq Expr) (Expr, error) {
 	list, err := getSlice(seq)
@@ -121,19 +109,19 @@ func newHashMap(seq Expr) (Expr, error) {
 	if (len(list) % 2) != 0 {
 		return nil, errors.New("odd number of arguments to NewHashMap")
 	}
-	hash_map := map[Str]Expr{}
+	hash_map := ExprHashMap{}
 	for i := 1; i < len(list); i += 2 {
-		str, ok := list[i-1].(Str)
+		str, ok := list[i-1].(ExprStr)
 		if !ok {
 			return nil, errors.New("expected hash-map key string")
 		}
 		hash_map[str] = list[i]
 	}
-	return HashMap{Map: hash_map}, nil
+	return hash_map, nil
 }
 
-func isHashMap(obj Expr) bool {
-	_, ok := obj.(HashMap)
+func isHashMap(expr Expr) bool {
+	_, ok := expr.(ExprHashMap)
 	return ok
 }
 
@@ -143,8 +131,8 @@ func isListOrVec(seq Expr) bool {
 	if seq == nil {
 		return false
 	}
-	return (reflect.TypeOf(seq) == reflect.TypeOf(List{})) ||
-		(reflect.TypeOf(seq) == reflect.TypeOf(Vec{}))
+	return (reflect.TypeOf(seq) == reflect.TypeOf(ExprList{})) ||
+		(reflect.TypeOf(seq) == reflect.TypeOf(ExprVec{}))
 }
 
 func isEq(a Expr, b Expr) bool {
@@ -153,7 +141,7 @@ func isEq(a Expr, b Expr) bool {
 		return false
 	}
 	switch a.(type) {
-	case Vec, List:
+	case ExprVec, ExprList:
 		sa, _ := getSlice(a)
 		sb, _ := getSlice(b)
 		if len(sa) != len(sb) {
@@ -165,8 +153,8 @@ func isEq(a Expr, b Expr) bool {
 			}
 		}
 		return true
-	case HashMap:
-		ma, mb := a.(HashMap).Map, b.(HashMap).Map
+	case ExprHashMap:
+		ma, mb := a.(ExprHashMap), b.(ExprHashMap)
 		if len(ma) != len(mb) {
 			return false
 		}

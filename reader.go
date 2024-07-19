@@ -53,16 +53,16 @@ func readAtom(r Reader) (Expr, error) {
 	tok := *token
 	if match, _ := regexp.MatchString(`^-?[0-9]+$`, tok); match {
 		num, err := strconv.Atoi(tok)
-		return Num(num), err
+		return ExprNum(num), err
 	} else if match, _ := regexp.MatchString(`^"(?:\\.|[^\\"])*"$`, tok); match {
 		str, err := strconv.Unquote(tok)
-		return Str(str), err
+		return ExprStr(str), err
 	} else if (tok)[0] == '"' {
 		return nil, errors.New("expected '\"', got EOF")
 	} else if (tok)[0] == ':' {
-		return Keyword(tok), nil
+		return ExprKeyword(tok), nil
 	} else {
-		return Ident(tok), nil
+		return ExprIdent(tok), nil
 	}
 }
 
@@ -74,7 +74,7 @@ func readList(r Reader, start string, end string) (Expr, error) {
 		return nil, errors.New("expected '" + start + "'")
 	}
 
-	var ast_list []Expr
+	var ast_list ExprList
 	token = r.peek()
 	for ; true; token = r.peek() {
 		if token == nil {
@@ -90,7 +90,7 @@ func readList(r Reader, start string, end string) (Expr, error) {
 		ast_list = append(ast_list, form)
 	}
 	r.next()
-	return List{List: ast_list}, nil
+	return ast_list, nil
 }
 
 func readVec(r Reader) (Expr, error) {
@@ -98,7 +98,7 @@ func readVec(r Reader) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	vec := Vec{List: list.(List).List}
+	vec := ExprVec(list.(ExprList))
 	return vec, nil
 }
 
@@ -122,46 +122,35 @@ func readForm(r Reader) (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return List{List: []Expr{Ident("quote"), form}}, nil
+		return ExprList{ExprIdent("quote"), form}, nil
 	case "`":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{List: []Expr{Ident("quasiquote"), form}}, nil
+		return ExprList{ExprIdent("quasiquote"), form}, nil
 	case `~`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Ident("unquote"), form}, nil}, nil
+		return ExprList{ExprIdent("unquote"), form}, nil
 	case `~@`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Ident("splice-unquote"), form}, nil}, nil
-	case `^`:
-		r.next()
-		meta, e := readForm(r)
-		if e != nil {
-			return nil, e
-		}
-		form, e := readForm(r)
-		if e != nil {
-			return nil, e
-		}
-		return List{[]Expr{Ident("with-meta"), form, meta}, nil}, nil
+		return ExprList{ExprIdent("splice-unquote"), form}, nil
 	case `@`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Ident("deref"), form}, nil}, nil
+		return ExprList{ExprIdent("deref"), form}, nil
 
 	// list
 	case ")":
@@ -185,11 +174,10 @@ func readForm(r Reader) (Expr, error) {
 	}
 }
 
-func Read_str(str string) (Expr, error) {
+func readExpr(str string) (Expr, error) {
 	var tokens = tokenize(str)
 	if len(tokens) == 0 {
-		return nil, errors.New("<empty line>")
+		return nil, nil
 	}
-
 	return readForm(&TokenReader{tokens: tokens, position: 0})
 }

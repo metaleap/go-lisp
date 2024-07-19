@@ -23,11 +23,11 @@ func stdAdd(args []Expr) (Expr, error) {
 	if err := mustArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	op1, err := mustType[Num](args[0])
+	op1, err := mustType[ExprNum](args[0])
 	if err != nil {
 		return nil, err
 	}
-	op2, err := mustType[Num](args[1])
+	op2, err := mustType[ExprNum](args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +38,11 @@ func stdSub(args []Expr) (Expr, error) {
 	if err := mustArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	op1, err := mustType[Num](args[0])
+	op1, err := mustType[ExprNum](args[0])
 	if err != nil {
 		return nil, err
 	}
-	op2, err := mustType[Num](args[1])
+	op2, err := mustType[ExprNum](args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -53,11 +53,11 @@ func stdMul(args []Expr) (Expr, error) {
 	if err := mustArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	op1, err := mustType[Num](args[0])
+	op1, err := mustType[ExprNum](args[0])
 	if err != nil {
 		return nil, err
 	}
-	op2, err := mustType[Num](args[1])
+	op2, err := mustType[ExprNum](args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +68,11 @@ func stdDiv(args []Expr) (Expr, error) {
 	if err := mustArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	op1, err := mustType[Num](args[0])
+	op1, err := mustType[ExprNum](args[0])
 	if err != nil {
 		return nil, err
 	}
-	op2, err := mustType[Num](args[1])
+	op2, err := mustType[ExprNum](args[1])
 	if err != nil {
 		return nil, err
 	}

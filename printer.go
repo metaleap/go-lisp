@@ -16,30 +16,31 @@ func printExpr(obj Expr, printReadably bool) string {
 	}
 
 	switch tobj := obj.(type) {
-	case List:
-		return print_list(tobj.List, printReadably, "(", ")", " ")
-	case Vec:
-		return print_list(tobj.List, printReadably, "[", "]", " ")
-	case HashMap:
-		str_list := make([]string, 0, len(tobj.Map)*2)
-		for k, v := range tobj.Map {
-			str_list = append(str_list, printExpr(k, printReadably))
-			str_list = append(str_list, printExpr(v, printReadably))
+	case ExprList:
+		return print_list(tobj, printReadably, "(", ")", " ")
+	case ExprVec:
+		return print_list(tobj, printReadably, "[", "]", " ")
+	case ExprHashMap:
+		str_list := make([]string, 0, len(tobj)*2)
+		for k, v := range tobj {
+			str_list = append(str_list, printExpr(k, printReadably), printExpr(v, printReadably))
 		}
 		return "{" + strings.Join(str_list, " ") + "}"
-	case Keyword:
+	case ExprKeyword:
 		return string(tobj)
-	case Str:
+	case ExprStr:
 		if printReadably {
 			return strconv.Quote(string(tobj))
 		} else {
 			return string(tobj)
 		}
-	case Ident:
+	case ExprIdent:
 		return string(tobj)
-	case Func:
+	case ExprFunc:
 		return fmt.Sprintf("<function %#v>", tobj)
+	case ExprNum:
+		return strconv.Itoa(int(tobj))
 	default:
-		return fmt.Sprintf("UNKNOWN:%#v", tobj)
+		return fmt.Sprintf("UNKNOWN %T %#v", tobj, tobj)
 	}
 }

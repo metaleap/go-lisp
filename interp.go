@@ -6,20 +6,20 @@ import (
 )
 
 var (
-	repl_env = Env{Map: map[Ident]Expr{
-		"+": Func{Fn: stdAdd},
-		"-": Func{Fn: stdSub},
-		"*": Func{Fn: stdMul},
-		"/": Func{Fn: stdDiv},
+	repl_env = Env{Map: map[ExprIdent]Expr{
+		"+": ExprFunc(stdAdd),
+		"-": ExprFunc(stdSub),
+		"*": ExprFunc(stdMul),
+		"/": ExprFunc(stdDiv),
 	}}
 )
 
 type Env struct {
 	Parent *Env
-	Map    map[Ident]Expr
+	Map    map[ExprIdent]Expr
 }
 
-func (me *Env) Lookup(name Ident) (Expr, bool) {
+func (me *Env) Lookup(name ExprIdent) (Expr, bool) {
 	found, ok := me.Map[name]
 	if (!ok) && (me.Parent != nil) {
 		return me.Parent.Lookup(name)
@@ -29,47 +29,47 @@ func (me *Env) Lookup(name Ident) (Expr, bool) {
 
 func eval(expr Expr, env *Env) (Expr, error) {
 	switch it := expr.(type) {
-	case Ident:
+	case ExprIdent:
 		expr, ok := env.Lookup(it)
 		if !ok {
 			return nil, errors.New("undefined: " + string(it))
 		}
 		return expr, nil
-	case Vec:
+	case ExprVec:
 		var err error
-		vec := Vec{List: make([]Expr, len(it.List))}
-		for i, item := range it.List {
-			vec.List[i], err = eval(item, env)
+		vec := make(ExprVec, len(it))
+		for i, item := range it {
+			vec[i], err = eval(item, env)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return vec, nil
-	case HashMap:
+	case ExprHashMap:
 		var err error
-		hash_map := HashMap{Map: make(map[Str]Expr, len(it.Map))}
-		for key, value := range it.Map {
-			hash_map.Map[key], err = eval(value, env)
+		hash_map := make(ExprHashMap, len(it))
+		for key, value := range it {
+			hash_map[key], err = eval(value, env)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return hash_map, nil
-	case List:
+	case ExprList:
 		var err error
-		list := List{List: make([]Expr, len(it.List))}
-		for i, item := range it.List {
-			list.List[i], err = eval(item, env)
+		list := make(ExprList, len(it))
+		for i, item := range it {
+			list[i], err = eval(item, env)
 			if err != nil {
 				return nil, err
 			}
 		}
-		if len(list.List) > 0 {
-			fn, err := mustType[Func](list.List[0])
+		if len(list) > 0 {
+			fn, err := mustType[ExprFunc](list[0])
 			if err != nil {
-				return nil, errors.New("uncallable: " + fmt.Sprintf("%#v", list.List[0]))
+				return nil, errors.New("uncallable: " + fmt.Sprintf("%#v", list[0]))
 			} else {
-				return fn.Fn(list.List[1:])
+				return fn(list[1:])
 			}
 		}
 		return list, nil
