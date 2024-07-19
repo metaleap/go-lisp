@@ -5,41 +5,15 @@ import (
 	"fmt"
 )
 
-var (
-	repl_env = Env{Map: map[ExprIdent]Expr{
-		"+": ExprFunc(stdAdd),
-		"-": ExprFunc(stdSub),
-		"*": ExprFunc(stdMul),
-		"/": ExprFunc(stdDiv),
-	}}
-)
-
-type Env struct {
-	Parent *Env
-	Map    map[ExprIdent]Expr
-}
-
-func (me *Env) Lookup(name ExprIdent) (Expr, bool) {
-	found, ok := me.Map[name]
-	if (!ok) && (me.Parent != nil) {
-		return me.Parent.Lookup(name)
-	}
-	return found, ok
-}
-
-func eval(expr Expr, env *Env) (Expr, error) {
+func eval(env *Env, expr Expr) (Expr, error) {
 	switch it := expr.(type) {
 	case ExprIdent:
-		expr, ok := env.Lookup(it)
-		if !ok {
-			return nil, errors.New("undefined: " + string(it))
-		}
-		return expr, nil
+		return env.Get(it)
 	case ExprVec:
 		var err error
 		vec := make(ExprVec, len(it))
 		for i, item := range it {
-			vec[i], err = eval(item, env)
+			vec[i], err = eval(env, item)
 			if err != nil {
 				return nil, err
 			}
@@ -49,19 +23,36 @@ func eval(expr Expr, env *Env) (Expr, error) {
 		var err error
 		hash_map := make(ExprHashMap, len(it))
 		for key, value := range it {
-			hash_map[key], err = eval(value, env)
+			hash_map[key], err = eval(env, value)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return hash_map, nil
 	case ExprList:
+		if len(it) == 0 {
+			return nil, errors.New("we have `nil` or `[]` for that")
+		}
+
+		var intrinsic_uneval Expr
+		if isIdent(it[0]) {
+			intrinsic_uneval = envUnEvals.Map[it[0].(ExprIdent)]
+		}
+
 		var err error
 		list := make(ExprList, len(it))
-		for i, item := range it {
-			list[i], err = eval(item, env)
+		if intrinsic_uneval != nil {
+			copy(list, it)
+			list[0], err = eval(env, list[0])
 			if err != nil {
 				return nil, err
+			}
+		} else {
+			for i, item := range it {
+				list[i], err = eval(env, item)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		if len(list) > 0 {
@@ -69,7 +60,7 @@ func eval(expr Expr, env *Env) (Expr, error) {
 			if err != nil {
 				return nil, errors.New("uncallable: " + fmt.Sprintf("%#v", list[0]))
 			} else {
-				return fn(list[1:])
+				return fn(env, list[1:])
 			}
 		}
 		return list, nil

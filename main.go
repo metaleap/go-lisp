@@ -12,7 +12,7 @@ func replRead(str string) (Expr, error) {
 }
 
 func replEval(expr Expr, env *Env) (Expr, error) {
-	return eval(expr, env)
+	return eval(env, expr)
 }
 
 func replPrint(expr Expr) string {
@@ -24,7 +24,7 @@ func repl(str string) (string, error) {
 	if err != nil || expr == nil {
 		return "", err
 	}
-	expr, err = replEval(expr, &repl_env)
+	expr, err = replEval(expr, &envMain)
 	if err != nil {
 		return "", err
 	}

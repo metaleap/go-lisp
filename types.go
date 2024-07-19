@@ -28,16 +28,6 @@ func isIdent(expr Expr) bool {
 	return ok
 }
 
-func (me ExprIdent) isNil() bool {
-	return string(me) == "nil"
-}
-func (me ExprIdent) isTrue() bool {
-	return string(me) == "true"
-}
-func (me ExprIdent) isFalse() bool {
-	return string(me) == "false"
-}
-
 type ExprNum int
 
 func isNum(expr Expr) bool {
@@ -60,7 +50,7 @@ func isString(expr Expr) bool {
 }
 
 // Functions
-type ExprFunc func([]Expr) (Expr, error)
+type ExprFunc func(*Env, []Expr) (Expr, error)
 
 func isFunc(expr Expr) bool {
 	_, ok := expr.(ExprFunc)
