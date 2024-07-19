@@ -33,26 +33,48 @@ var (
 	exprNil   = ExprKeyword(":nil")
 )
 
-func mustArgCountExactly(want int, have []Expr) error {
+func reqArgCountExactly(want int, have []Expr) error {
 	if len(have) != want {
 		return fmt.Errorf("expected %d args, not %d", want, len(have))
 	}
 	return nil
 }
 
-func mustArgCountAtLeast(want int, have []Expr) error {
+func reqArgCountAtLeast(want int, have []Expr) error {
 	if len(have) < want {
 		return fmt.Errorf("expected at least %d args, not %d", want, len(have))
 	}
 	return nil
 }
 
-func mustType[T any](have Expr) (T, error) {
+func reqType[T any](have Expr) (T, error) {
 	ret, ok := have.(T)
 	if !ok {
 		return ret, fmt.Errorf("expected %T, not %T", ret, have)
 	}
 	return ret, nil
+}
+
+func reqTypes[T any](have ...Expr) error {
+	for _, expr := range have {
+		if _, err := reqType[T](expr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func reqTypes2[T1 any, T2 any](have ...Expr) (ret1 T1, ret2 T2, err error) {
+	if err = reqArgCountExactly(2, have); err != nil {
+		return
+	}
+	if ret1, err = reqType[T1](have[0]); err != nil {
+		return
+	}
+	if ret2, err = reqType[T2](have[1]); err != nil {
+		return
+	}
+	return
 }
 
 func mustSeq(expr Expr) ([]Expr, error) {
@@ -67,14 +89,7 @@ func mustSeq(expr Expr) ([]Expr, error) {
 }
 
 func stdAdd(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
-		return nil, err
-	}
-	op1, err := mustType[ExprNum](args[0])
-	if err != nil {
-		return nil, err
-	}
-	op2, err := mustType[ExprNum](args[1])
+	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,14 +97,7 @@ func stdAdd(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdSub(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
-		return nil, err
-	}
-	op1, err := mustType[ExprNum](args[0])
-	if err != nil {
-		return nil, err
-	}
-	op2, err := mustType[ExprNum](args[1])
+	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,14 +105,7 @@ func stdSub(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdMul(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
-		return nil, err
-	}
-	op1, err := mustType[ExprNum](args[0])
-	if err != nil {
-		return nil, err
-	}
-	op2, err := mustType[ExprNum](args[1])
+	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +113,7 @@ func stdMul(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdDiv(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
-		return nil, err
-	}
-	op1, err := mustType[ExprNum](args[0])
-	if err != nil {
-		return nil, err
-	}
-	op2, err := mustType[ExprNum](args[1])
+	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +127,10 @@ func stdSet(env *Env, args []Expr) (Expr, error) {
 	return defOrSet(false, env, args)
 }
 func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
+	if err := reqArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	name, err := mustType[ExprIdent](args[0])
+	name, err := reqType[ExprIdent](args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +149,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
 }
 
 func stdDo(env *Env, args []Expr) (expr Expr, err error) {
-	if err = mustArgCountAtLeast(1, args); err != nil {
+	if err = reqArgCountAtLeast(1, args); err != nil {
 		return
 	}
 	for _, arg := range args {
@@ -167,7 +161,7 @@ func stdDo(env *Env, args []Expr) (expr Expr, err error) {
 }
 
 func stdLet(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountAtLeast(2, args); err != nil {
+	if err := reqArgCountAtLeast(2, args); err != nil {
 		return nil, err
 	}
 	bindings, err := mustSeq(args[0])
@@ -180,10 +174,10 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = mustArgCountExactly(2, pair); err != nil {
+		if err = reqArgCountExactly(2, pair); err != nil {
 			return nil, err
 		}
-		name, err := mustType[ExprIdent](pair[0])
+		name, err := reqType[ExprIdent](pair[0])
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +191,7 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdEq(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(2, args); err != nil {
+	if err := reqArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
 	expr1, err := eval(env, args[0])
@@ -215,7 +209,7 @@ func stdEq(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdIf(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountExactly(3, args); err != nil {
+	if err := reqArgCountExactly(3, args); err != nil {
 		return nil, err
 	}
 	expr, err := eval(env, args[0])
@@ -230,20 +224,18 @@ func stdIf(env *Env, args []Expr) (Expr, error) {
 }
 
 func stdFn(env *Env, args []Expr) (Expr, error) {
-	if err := mustArgCountAtLeast(2, args); err != nil {
+	if err := reqArgCountAtLeast(2, args); err != nil {
 		return nil, err
 	}
 	params, err := mustSeq(args[0])
 	if err != nil {
 		return nil, err
 	}
-	for _, param := range params {
-		if _, err = mustType[ExprIdent](param); err != nil {
-			return nil, err
-		}
+	if err := reqTypes[ExprIdent](params...); err != nil {
+		return nil, err
 	}
 	return ExprFunc(func(_callerEnv *Env, callerArgs []Expr) (Expr, error) {
-		if err := mustArgCountExactly(len(params), callerArgs); err != nil {
+		if err := reqArgCountExactly(len(params), callerArgs); err != nil {
 			return nil, err
 		}
 		env_closure := newEnv(env, params, callerArgs)

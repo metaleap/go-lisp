@@ -56,7 +56,7 @@ func eval(env *Env, expr Expr) (Expr, error) {
 			}
 		}
 		if len(list) > 0 {
-			fn, err := mustType[ExprFunc](list[0])
+			fn, err := reqType[ExprFunc](list[0])
 			if err != nil {
 				return nil, errors.New("uncallable: " + fmt.Sprintf("%#v", list[0]))
 			} else {
