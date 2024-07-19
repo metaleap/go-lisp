@@ -14,7 +14,7 @@ func init() {
 		"if":  ExprFunc(stdIf),
 		"fn":  ExprFunc(stdFn),
 	} {
-		envUnEvals.Map[k] = v
+		envSpecials.Map[k] = v
 	}
 	for k, v := range map[ExprIdent]Expr{
 		"+": ExprFunc(stdAdd),

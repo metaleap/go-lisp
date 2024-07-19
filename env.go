@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	envUnEvals = newEnv(nil, nil, nil)
-	envMain    = newEnv(envUnEvals, nil, nil)
+	envSpecials = newEnv(nil, nil, nil)
+	envMain     = newEnv(envSpecials, nil, nil)
 )
 
 type Env struct {

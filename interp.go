@@ -36,7 +36,7 @@ func eval(env *Env, expr Expr) (Expr, error) {
 
 		var intrinsic_uneval Expr
 		if isIdent(it[0]) {
-			intrinsic_uneval = envUnEvals.Map[it[0].(ExprIdent)]
+			intrinsic_uneval = envSpecials.Map[it[0].(ExprIdent)]
 		}
 
 		var err error
