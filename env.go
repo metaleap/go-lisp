@@ -1,10 +1,13 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
-	envUnEvals = newEnv(nil)
-	envMain    = newEnv(envUnEvals)
+	envUnEvals = newEnv(nil, nil, nil)
+	envMain    = newEnv(envUnEvals, nil, nil)
 )
 
 type Env struct {
@@ -12,10 +15,13 @@ type Env struct {
 	Map    map[ExprIdent]Expr
 }
 
-func newEnv(parent *Env, bindsExprs ...Expr) *Env {
-	ret := Env{Parent: parent, Map: make(map[ExprIdent]Expr, len(bindsExprs)/2)}
-	for i := 1; i < len(bindsExprs); i += 2 {
-		ret.Map[bindsExprs[i-1].(ExprIdent)] = bindsExprs[i]
+func newEnv(parent *Env, binds []Expr, exprs []Expr) *Env {
+	if len(binds) != len(exprs) {
+		panic(fmt.Sprintf("%d vs %d", len(binds), len(exprs)))
+	}
+	ret := Env{Parent: parent, Map: make(map[ExprIdent]Expr, len(binds))}
+	for i, bind := range binds {
+		ret.Map[bind.(ExprIdent)] = exprs[i]
 	}
 	return &ret
 }

@@ -12,6 +12,7 @@ func init() {
 		"let": ExprFunc(stdLet),
 		"do":  ExprFunc(stdDo),
 		"if":  ExprFunc(stdIf),
+		"fn":  ExprFunc(stdFn),
 	} {
 		envUnEvals.Map[k] = v
 	}
@@ -173,7 +174,7 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	let_env := newEnv(env)
+	let_env := newEnv(env, nil, nil)
 	for _, binding := range bindings {
 		pair, err := mustSeq(binding)
 		if err != nil {
@@ -226,4 +227,26 @@ func stdIf(env *Env, args []Expr) (Expr, error) {
 		idx = 2
 	}
 	return eval(env, args[idx])
+}
+
+func stdFn(env *Env, args []Expr) (Expr, error) {
+	if err := mustArgCountAtLeast(2, args); err != nil {
+		return nil, err
+	}
+	params, err := mustSeq(args[0])
+	if err != nil {
+		return nil, err
+	}
+	for _, param := range params {
+		if _, err = mustType[ExprIdent](param); err != nil {
+			return nil, err
+		}
+	}
+	return ExprFunc(func(_callerEnv *Env, callerArgs []Expr) (Expr, error) {
+		if err := mustArgCountExactly(len(params), callerArgs); err != nil {
+			return nil, err
+		}
+		env_closure := newEnv(env, params, callerArgs)
+		return stdDo(env_closure, args[1:])
+	}), nil
 }
