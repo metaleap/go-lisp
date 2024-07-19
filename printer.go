@@ -2,56 +2,44 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
-func Pr_list(lst []Expr, pr bool, start string, end string, join string) string {
-	str_list := make([]string, 0, len(lst))
-	for _, e := range lst {
-		str_list = append(str_list, Pr_str(e, pr))
+func printExpr(obj Expr, printReadably bool) string {
+	print_list := func(lst []Expr, pr bool, opening string, closing string, sep string) string {
+		ret := make([]string, 0, len(lst))
+		for _, e := range lst {
+			ret = append(ret, printExpr(e, pr))
+		}
+		return opening + strings.Join(ret, sep) + closing
 	}
-	return start + strings.Join(str_list, join) + end
-}
 
-func Pr_str(obj Expr, printReadably bool) string {
 	switch tobj := obj.(type) {
 	case List:
-		return Pr_list(tobj.Val, printReadably, "(", ")", " ")
-	case Vector:
-		return Pr_list(tobj.Val, printReadably, "[", "]", " ")
+		return print_list(tobj.List, printReadably, "(", ")", " ")
+	case Vec:
+		return print_list(tobj.List, printReadably, "[", "]", " ")
 	case HashMap:
-		str_list := make([]string, 0, len(tobj.Val)*2)
-		for k, v := range tobj.Val {
-			str_list = append(str_list, Pr_str(k, printReadably))
-			str_list = append(str_list, Pr_str(v, printReadably))
+		str_list := make([]string, 0, len(tobj.Map)*2)
+		for k, v := range tobj.Map {
+			str_list = append(str_list, printExpr(k, printReadably))
+			str_list = append(str_list, printExpr(v, printReadably))
 		}
 		return "{" + strings.Join(str_list, " ") + "}"
-	case string:
-		if strings.HasPrefix(tobj, "\u029e") {
-			return ":" + tobj[2:]
-		} else if printReadably {
-			return `"` + strings.ReplaceAll(
-				strings.ReplaceAll(
-					strings.ReplaceAll(tobj, `\`, `\\`),
-					`"`, `\"`),
-				"\n", `\n`) + `"`
+	case Keyword:
+		return string(tobj)
+	case Str:
+		if printReadably {
+			return strconv.Quote(string(tobj))
 		} else {
-			return tobj
+			return string(tobj)
 		}
-	case Symbol:
-		return tobj.Val
-	case nil:
-		return "nil"
-	case MalFunc:
-		return "(fn* " +
-			Pr_str(tobj.Params, true) + " " +
-			Pr_str(tobj.Exp, true) + ")"
-	case func([]Expr) (Expr, error):
-		return fmt.Sprintf("<function %v>", obj)
-	case *Atom:
-		return "(atom " +
-			Pr_str(tobj.Val, true) + ")"
+	case Ident:
+		return string(tobj)
+	case Func:
+		return fmt.Sprintf("<function %#v>", tobj)
 	default:
-		return fmt.Sprintf("%v", obj)
+		return fmt.Sprintf("UNKNOWN:%#v", tobj)
 	}
 }

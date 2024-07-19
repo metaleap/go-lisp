@@ -16,7 +16,7 @@ func replEval(expr Expr, env *Env) (Expr, error) {
 }
 
 func replPrint(expr Expr) string {
-	return Pr_str(expr, true)
+	return printExpr(expr, true)
 }
 
 func repl(str string) (string, error) {

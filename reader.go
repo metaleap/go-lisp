@@ -4,7 +4,6 @@ import (
 	"errors"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 type Reader interface {
@@ -17,29 +16,27 @@ type TokenReader struct {
 	position int
 }
 
-func (tr *TokenReader) next() *string {
-	if tr.position >= len(tr.tokens) {
+func (me *TokenReader) next() *string {
+	if me.position >= len(me.tokens) {
 		return nil
 	}
-	token := tr.tokens[tr.position]
-	tr.position = tr.position + 1
+	token := me.tokens[me.position]
+	me.position = me.position + 1
 	return &token
 }
 
-func (tr *TokenReader) peek() *string {
-	if tr.position >= len(tr.tokens) {
+func (me *TokenReader) peek() *string {
+	if me.position >= len(me.tokens) {
 		return nil
 	}
-	return &tr.tokens[tr.position]
+	return &me.tokens[me.position]
 }
 
-func tokenize(str string) []string {
+func tokenize(src string) []string {
 	results := make([]string, 0, 1)
 	// Work around lack of quoting in backtick
-	re := regexp.MustCompile(`[\s,]*(~@|[\[\]{}()'` + "`" +
-		`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"` + "`" +
-		`,;)]*)`)
-	for _, group := range re.FindAllStringSubmatch(str, -1) {
+	regex := regexp.MustCompile(`[\s,]*(~@|[\[\]{}()'` + "`" + `~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"` + "`" + `,;)]*)`)
+	for _, group := range regex.FindAllStringSubmatch(src, -1) {
 		if (group[1] == "") || (group[1][0] == ';') {
 			continue
 		}
@@ -48,161 +45,143 @@ func tokenize(str string) []string {
 	return results
 }
 
-func read_atom(rdr Reader) (Expr, error) {
-	token := rdr.next()
+func readAtom(r Reader) (Expr, error) {
+	token := r.next()
 	if token == nil {
-		return nil, errors.New("read_atom underflow")
+		return nil, errors.New("readAtom underflow")
 	}
-	if match, _ := regexp.MatchString(`^-?[0-9]+$`, *token); match {
-		var i int
-		var e error
-		if i, e = strconv.Atoi(*token); e != nil {
-			return nil, errors.New("number parse error")
-		}
-		return i, nil
-	} else if match, _ :=
-		regexp.MatchString(`^"(?:\\.|[^\\"])*"$`, *token); match {
-		str := (*token)[1 : len(*token)-1]
-		return strings.Replace(
-			strings.Replace(
-				strings.Replace(
-					strings.Replace(str, `\\`, "\u029e", -1),
-					`\"`, `"`, -1),
-				`\n`, "\n", -1),
-			"\u029e", "\\", -1), nil
-	} else if (*token)[0] == '"' {
+	tok := *token
+	if match, _ := regexp.MatchString(`^-?[0-9]+$`, tok); match {
+		num, err := strconv.Atoi(tok)
+		return Num(num), err
+	} else if match, _ := regexp.MatchString(`^"(?:\\.|[^\\"])*"$`, tok); match {
+		str, err := strconv.Unquote(tok)
+		return Str(str), err
+	} else if (tok)[0] == '"' {
 		return nil, errors.New("expected '\"', got EOF")
-	} else if (*token)[0] == ':' {
-		return NewKeyword((*token)[1:len(*token)])
-	} else if *token == "nil" {
-		return nil, nil
-	} else if *token == "true" {
-		return true, nil
-	} else if *token == "false" {
-		return false, nil
+	} else if (tok)[0] == ':' {
+		return Keyword(tok), nil
 	} else {
-		return Symbol{*token}, nil
+		return Ident(tok), nil
 	}
 }
 
-func read_list(rdr Reader, start string, end string) (Expr, error) {
-	token := rdr.next()
+func readList(r Reader, start string, end string) (Expr, error) {
+	token := r.next()
 	if token == nil {
-		return nil, errors.New("read_list underflow")
-	}
-	if *token != start {
+		return nil, errors.New("readList underflow")
+	} else if *token != start {
 		return nil, errors.New("expected '" + start + "'")
 	}
 
-	ast_list := []Expr{}
-	token = rdr.peek()
-	for ; true; token = rdr.peek() {
+	var ast_list []Expr
+	token = r.peek()
+	for ; true; token = r.peek() {
 		if token == nil {
 			return nil, errors.New("exepected '" + end + "', got EOF")
 		}
 		if *token == end {
 			break
 		}
-		f, e := read_form(rdr)
-		if e != nil {
-			return nil, e
+		form, err := readForm(r)
+		if err != nil {
+			return nil, err
 		}
-		ast_list = append(ast_list, f)
+		ast_list = append(ast_list, form)
 	}
-	rdr.next()
-	return List{ast_list, nil}, nil
+	r.next()
+	return List{List: ast_list}, nil
 }
 
-func read_vector(rdr Reader) (Expr, error) {
-	lst, e := read_list(rdr, "[", "]")
-	if e != nil {
-		return nil, e
+func readVec(r Reader) (Expr, error) {
+	list, err := readList(r, "[", "]")
+	if err != nil {
+		return nil, err
 	}
-	vec := Vector{lst.(List).Val, nil}
+	vec := Vec{List: list.(List).List}
 	return vec, nil
 }
 
-func read_hash_map(rdr Reader) (Expr, error) {
-	mal_lst, e := read_list(rdr, "{", "}")
-	if e != nil {
-		return nil, e
+func readHashMap(r Reader) (Expr, error) {
+	list, err := readList(r, "{", "}")
+	if err != nil {
+		return nil, err
 	}
-	return NewHashMap(mal_lst)
+	return newHashMap(list)
 }
 
-func read_form(rdr Reader) (Expr, error) {
-	token := rdr.peek()
+func readForm(r Reader) (Expr, error) {
+	token := r.peek()
 	if token == nil {
-		return nil, errors.New("read_form underflow")
+		return nil, errors.New("readForm underflow")
 	}
 	switch *token {
-
 	case `'`:
-		rdr.next()
-		form, e := read_form(rdr)
-		if e != nil {
-			return nil, e
+		r.next()
+		form, err := readForm(r)
+		if err != nil {
+			return nil, err
 		}
-		return List{[]Expr{Symbol{"quote"}, form}, nil}, nil
+		return List{List: []Expr{Ident("quote"), form}}, nil
 	case "`":
-		rdr.next()
-		form, e := read_form(rdr)
+		r.next()
+		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Symbol{"quasiquote"}, form}, nil}, nil
+		return List{List: []Expr{Ident("quasiquote"), form}}, nil
 	case `~`:
-		rdr.next()
-		form, e := read_form(rdr)
+		r.next()
+		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Symbol{"unquote"}, form}, nil}, nil
+		return List{[]Expr{Ident("unquote"), form}, nil}, nil
 	case `~@`:
-		rdr.next()
-		form, e := read_form(rdr)
+		r.next()
+		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Symbol{"splice-unquote"}, form}, nil}, nil
+		return List{[]Expr{Ident("splice-unquote"), form}, nil}, nil
 	case `^`:
-		rdr.next()
-		meta, e := read_form(rdr)
+		r.next()
+		meta, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		form, e := read_form(rdr)
+		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Symbol{"with-meta"}, form, meta}, nil}, nil
+		return List{[]Expr{Ident("with-meta"), form, meta}, nil}, nil
 	case `@`:
-		rdr.next()
-		form, e := read_form(rdr)
+		r.next()
+		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]Expr{Symbol{"deref"}, form}, nil}, nil
+		return List{[]Expr{Ident("deref"), form}, nil}, nil
 
 	// list
 	case ")":
 		return nil, errors.New("unexpected ')'")
 	case "(":
-		return read_list(rdr, "(", ")")
+		return readList(r, "(", ")")
 
 	// vector
 	case "]":
 		return nil, errors.New("unexpected ']'")
 	case "[":
-		return read_vector(rdr)
+		return readVec(r)
 
 	// hash-map
 	case "}":
 		return nil, errors.New("unexpected '}'")
 	case "{":
-		return read_hash_map(rdr)
+		return readHashMap(r)
 	default:
-		return read_atom(rdr)
+		return readAtom(r)
 	}
 }
 
@@ -212,5 +191,5 @@ func Read_str(str string) (Expr, error) {
 		return nil, errors.New("<empty line>")
 	}
 
-	return read_form(&TokenReader{tokens: tokens, position: 0})
+	return readForm(&TokenReader{tokens: tokens, position: 0})
 }
