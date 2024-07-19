@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func init() {
@@ -20,6 +21,9 @@ func init() {
 	}
 	for k, v := range map[ExprIdent]Expr{
 		"print":   ExprFunc(stdPrint),
+		"println": ExprFunc(stdPrintln),
+		"str":     ExprFunc(stdStr),
+		"show":    ExprFunc(stdShow),
 		"list":    ExprFunc(stdList),
 		"is":      ExprFunc(stdIs),
 		"isEmpty": ExprFunc(stdIsEmpty),
@@ -107,7 +111,7 @@ func mustSeq(expr Expr) ([]Expr, error) {
 	}
 }
 
-func stdAdd(env *Env, args []Expr) (Expr, error) {
+func stdAdd(_ *Env, args []Expr) (Expr, error) {
 	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
@@ -115,7 +119,7 @@ func stdAdd(env *Env, args []Expr) (Expr, error) {
 	return op1 + op2, nil
 }
 
-func stdSub(env *Env, args []Expr) (Expr, error) {
+func stdSub(_ *Env, args []Expr) (Expr, error) {
 	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
@@ -123,7 +127,7 @@ func stdSub(env *Env, args []Expr) (Expr, error) {
 	return op1 - op2, nil
 }
 
-func stdMul(env *Env, args []Expr) (Expr, error) {
+func stdMul(_ *Env, args []Expr) (Expr, error) {
 	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
@@ -131,7 +135,7 @@ func stdMul(env *Env, args []Expr) (Expr, error) {
 	return op1 * op2, nil
 }
 
-func stdDiv(env *Env, args []Expr) (Expr, error) {
+func stdDiv(_ *Env, args []Expr) (Expr, error) {
 	op1, op2, err := reqTypes2[ExprNum, ExprNum](args...)
 	if err != nil {
 		return nil, err
@@ -209,19 +213,11 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 	return stdDo(let_env, args[1:])
 }
 
-func stdEq(env *Env, args []Expr) (Expr, error) {
+func stdEq(_ *Env, args []Expr) (Expr, error) {
 	if err := reqArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	expr1, err := eval(env, args[0])
-	if err != nil {
-		return nil, err
-	}
-	expr2, err := eval(env, args[1])
-	if err != nil {
-		return nil, err
-	}
-	return exprBool(isEq(expr1, expr2)), nil
+	return exprBool(isEq(args[0], args[1])), nil
 }
 
 func stdIf(env *Env, args []Expr) (Expr, error) {
@@ -259,20 +255,37 @@ func stdFn(env *Env, args []Expr) (Expr, error) {
 	}), nil
 }
 
-func stdPrint(env *Env, args []Expr) (Expr, error) {
-	if err := reqArgCountExactly(1, args); err != nil {
-		return nil, err
+func str(args []Expr, printReadably bool) string {
+	var buf strings.Builder
+	for i, arg := range args {
+		if i > 0 && printReadably {
+			buf.WriteByte(' ')
+		}
+		buf.WriteString(printExpr(arg, printReadably))
 	}
-	src := printExpr(args[0], true)
-	os.Stdout.WriteString(src + "\n")
-	return exprNil, nil
+	return buf.String()
 }
 
-func stdList(env *Env, args []Expr) (Expr, error) {
+func stdPrint(_ *Env, args []Expr) (Expr, error) {
+	os.Stdout.WriteString(str(args, true))
+	return exprNil, nil
+}
+func stdPrintln(_ *Env, args []Expr) (Expr, error) {
+	os.Stdout.WriteString(str(args, true) + "\n")
+	return exprNil, nil
+}
+func stdStr(_ *Env, args []Expr) (Expr, error) {
+	return ExprStr(str(args, false)), nil
+}
+func stdShow(_ *Env, args []Expr) (Expr, error) {
+	return ExprStr(str(args, true)), nil
+}
+
+func stdList(_ *Env, args []Expr) (Expr, error) {
 	return ExprList(args), nil
 }
 
-func stdIs(env *Env, args []Expr) (Expr, error) {
+func stdIs(_ *Env, args []Expr) (Expr, error) {
 	if err := reqArgCountExactly(2, args); err != nil {
 		return nil, err
 	}
@@ -304,7 +317,7 @@ func stdIs(env *Env, args []Expr) (Expr, error) {
 	return exprBool(ok), nil
 }
 
-func stdIsEmpty(env *Env, args []Expr) (Expr, error) {
+func stdIsEmpty(_ *Env, args []Expr) (Expr, error) {
 	if err := reqArgCountExactly(1, args); err != nil {
 		return nil, err
 	}
@@ -315,7 +328,7 @@ func stdIsEmpty(env *Env, args []Expr) (Expr, error) {
 	return exprBool(len(list) == 0), nil
 }
 
-func stdCount(env *Env, args []Expr) (Expr, error) {
+func stdCount(_ *Env, args []Expr) (Expr, error) {
 	if err := reqArgCountExactly(1, args); err != nil {
 		return nil, err
 	}
@@ -348,35 +361,35 @@ func compare(args []Expr) (int, error) {
 
 }
 
-func stdCmp(env *Env, args []Expr) (Expr, error) {
+func stdCmp(_ *Env, args []Expr) (Expr, error) {
 	order, err := compare(args)
 	if err != nil {
 		return nil, err
 	}
 	return ExprNum(order), nil
 }
-func stdLt(env *Env, args []Expr) (Expr, error) {
+func stdLt(_ *Env, args []Expr) (Expr, error) {
 	order, err := compare(args)
 	if err != nil {
 		return nil, err
 	}
 	return exprBool(order == -1), nil
 }
-func stdLe(env *Env, args []Expr) (Expr, error) {
+func stdLe(_ *Env, args []Expr) (Expr, error) {
 	order, err := compare(args)
 	if err != nil {
 		return nil, err
 	}
 	return exprBool(order <= 0), nil
 }
-func stdGt(env *Env, args []Expr) (Expr, error) {
+func stdGt(_ *Env, args []Expr) (Expr, error) {
 	order, err := compare(args)
 	if err != nil {
 		return nil, err
 	}
 	return exprBool(order == 1), nil
 }
-func stdGe(env *Env, args []Expr) (Expr, error) {
+func stdGe(_ *Env, args []Expr) (Expr, error) {
 	order, err := compare(args)
 	if err != nil {
 		return nil, err

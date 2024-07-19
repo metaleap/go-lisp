@@ -78,7 +78,7 @@ func readList(r Reader, start string, end string) (Expr, error) {
 	token = r.peek()
 	for ; true; token = r.peek() {
 		if token == nil {
-			return nil, errors.New("exepected '" + end + "', got EOF")
+			return nil, errors.New("expected '" + end + "', got EOF")
 		}
 		if *token == end {
 			break

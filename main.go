@@ -34,6 +34,13 @@ func repl(str string) (string, error) {
 func main() {
 	readln := bufio.NewScanner(os.Stdin) // for line-editing, just run with `rlwrap`
 	// repl loop
+
+	// define `not` in source:
+	input := "(def not (fn (b) (if b :false :true)))"
+	if _, err := repl(input); err != nil {
+		panic(err)
+	}
+
 	fmt.Print("\nrepl> ")
 	for readln.Scan() {
 		input := strings.TrimSpace(readln.Text())
