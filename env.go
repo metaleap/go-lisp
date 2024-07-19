@@ -7,23 +7,6 @@ var (
 	envMain    = Env{Parent: &envUnEvals, Map: map[ExprIdent]Expr{}}
 )
 
-func init() {
-	for k, v := range map[ExprIdent]Expr{
-		"def!": ExprFunc(stdDef),
-		"set!": ExprFunc(stdSet),
-	} {
-		envUnEvals.Map[k] = v
-	}
-	for k, v := range map[ExprIdent]Expr{
-		"+": ExprFunc(stdAdd),
-		"-": ExprFunc(stdSub),
-		"*": ExprFunc(stdMul),
-		"/": ExprFunc(stdDiv),
-	} {
-		envMain.Map[k] = v
-	}
-}
-
 type Env struct {
 	Parent *Env
 	Map    map[ExprIdent]Expr

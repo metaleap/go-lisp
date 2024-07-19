@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -77,14 +78,14 @@ func isVec(expr Expr) bool {
 	return ok
 }
 
-func getSlice(expr Expr) ([]Expr, error) {
+func mustSeq(expr Expr) ([]Expr, error) {
 	switch expr := expr.(type) {
 	case ExprList:
 		return ([]Expr)(expr), nil
 	case ExprVec:
 		return ([]Expr)(expr), nil
 	default:
-		return nil, errors.New("getSlice called on non-sequence")
+		return nil, fmt.Errorf("expected list or vector, not %T", expr)
 	}
 }
 
@@ -92,7 +93,7 @@ func getSlice(expr Expr) ([]Expr, error) {
 type ExprHashMap map[ExprStr]Expr
 
 func newHashMap(seq Expr) (Expr, error) {
-	list, err := getSlice(seq)
+	list, err := mustSeq(seq)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +133,8 @@ func isEq(a Expr, b Expr) bool {
 	}
 	switch a.(type) {
 	case ExprVec, ExprList:
-		sa, _ := getSlice(a)
-		sb, _ := getSlice(b)
+		sa, _ := mustSeq(a)
+		sb, _ := mustSeq(b)
 		if len(sa) != len(sb) {
 			return false
 		}

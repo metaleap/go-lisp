@@ -5,6 +5,25 @@ import (
 	"fmt"
 )
 
+func init() {
+	for k, v := range map[ExprIdent]Expr{
+		"def":   ExprFunc(stdDef),
+		"set":   ExprFunc(stdSet),
+		"let":   ExprFunc(stdLet),
+		"begin": ExprFunc(stdBegin),
+	} {
+		envUnEvals.Map[k] = v
+	}
+	for k, v := range map[ExprIdent]Expr{
+		"+": ExprFunc(stdAdd),
+		"-": ExprFunc(stdSub),
+		"*": ExprFunc(stdMul),
+		"/": ExprFunc(stdDiv),
+	} {
+		envMain.Map[k] = v
+	}
+}
+
 var (
 	exprTrue  = ExprIdent("true")
 	exprFalse = ExprIdent("false")
@@ -22,6 +41,13 @@ func mustType[T any](have Expr) (T, error) {
 func mustArgCountExactly(want int, have []Expr) error {
 	if len(have) != want {
 		return fmt.Errorf("expected %d args, not %d", want, len(have))
+	}
+	return nil
+}
+
+func mustArgCountAtLeast(want int, have []Expr) error {
+	if len(have) < want {
+		return fmt.Errorf("expected at least %d args, not %d", want, len(have))
 	}
 	return nil
 }
@@ -111,5 +137,47 @@ func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
 		return nil, err
 	}
 	env.Set(name, expr)
-	return exprNil, nil
+	return expr, nil
+}
+
+func stdBegin(env *Env, args []Expr) (expr Expr, err error) {
+	if err = mustArgCountAtLeast(1, args); err != nil {
+		return
+	}
+	for _, arg := range args {
+		if expr, err = eval(env, arg); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func stdLet(env *Env, args []Expr) (Expr, error) {
+	if err := mustArgCountAtLeast(2, args); err != nil {
+		return nil, err
+	}
+	bindings, err := mustSeq(args[0])
+	if err != nil {
+		return nil, err
+	}
+	let_env := Env{Parent: env, Map: make(map[ExprIdent]Expr, len(bindings))}
+	for _, binding := range bindings {
+		pair, err := mustSeq(binding)
+		if err != nil {
+			return nil, err
+		}
+		if err = mustArgCountExactly(2, pair); err != nil {
+			return nil, err
+		}
+		name, err := mustType[ExprIdent](pair[0])
+		if err != nil {
+			return nil, err
+		}
+		expr, err := eval(&let_env, pair[1])
+		if err != nil {
+			return nil, err
+		}
+		let_env.Set(name, expr)
+	}
+	return stdBegin(&let_env, args[1:])
 }
