@@ -32,7 +32,7 @@ func repl(str string) (string, error) {
 }
 
 func main() {
-	readln := bufio.NewScanner(os.Stdin)
+	readln := bufio.NewScanner(os.Stdin) // for line-editing, just run with `rlwrap`
 	// repl loop
 	fmt.Print("\nrepl> ")
 	for readln.Scan() {

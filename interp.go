@@ -30,12 +30,8 @@ func eval(env *Env, expr Expr) (Expr, error) {
 		}
 		return hash_map, nil
 	case ExprList:
-		if len(it) == 0 {
-			return nil, errors.New("we have `nil` or `[]` for that")
-		}
-
 		var intrinsic_uneval Expr
-		if isIdent(it[0]) {
+		if len(it) > 0 && isIdent(it[0]) {
 			intrinsic_uneval = envSpecials.Map[it[0].(ExprIdent)]
 		}
 

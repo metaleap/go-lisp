@@ -1,8 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"os"
 )
 
 func init() {
@@ -17,11 +19,21 @@ func init() {
 		envSpecials.Map[k] = v
 	}
 	for k, v := range map[ExprIdent]Expr{
-		"+": ExprFunc(stdAdd),
-		"-": ExprFunc(stdSub),
-		"*": ExprFunc(stdMul),
-		"/": ExprFunc(stdDiv),
-		"=": ExprFunc(stdEq),
+		"print":   ExprFunc(stdPrint),
+		"list":    ExprFunc(stdList),
+		"is":      ExprFunc(stdIs),
+		"isEmpty": ExprFunc(stdIsEmpty),
+		"count":   ExprFunc(stdCount),
+		"cmp":     ExprFunc(stdCmp),
+		"+":       ExprFunc(stdAdd),
+		"-":       ExprFunc(stdSub),
+		"*":       ExprFunc(stdMul),
+		"/":       ExprFunc(stdDiv),
+		"=":       ExprFunc(stdEq),
+		"<":       ExprFunc(stdLt),
+		">":       ExprFunc(stdGt),
+		"<=":      ExprFunc(stdLe),
+		">=":      ExprFunc(stdGe),
 	} {
 		envMain.Map[k] = v
 	}
@@ -33,16 +45,23 @@ var (
 	exprNil   = ExprKeyword(":nil")
 )
 
+func exprBool(b bool) ExprKeyword {
+	if b {
+		return exprTrue
+	}
+	return exprFalse
+}
+
 func reqArgCountExactly(want int, have []Expr) error {
 	if len(have) != want {
-		return fmt.Errorf("expected %d args, not %d", want, len(have))
+		return fmt.Errorf("expected %d arg(s), not %d", want, len(have))
 	}
 	return nil
 }
 
 func reqArgCountAtLeast(want int, have []Expr) error {
 	if len(have) < want {
-		return fmt.Errorf("expected at least %d args, not %d", want, len(have))
+		return fmt.Errorf("expected at least %d arg(s), not %d", want, len(have))
 	}
 	return nil
 }
@@ -202,10 +221,7 @@ func stdEq(env *Env, args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if isEq(expr1, expr2) {
-		return exprTrue, nil
-	}
-	return exprFalse, nil
+	return exprBool(isEq(expr1, expr2)), nil
 }
 
 func stdIf(env *Env, args []Expr) (Expr, error) {
@@ -241,4 +257,129 @@ func stdFn(env *Env, args []Expr) (Expr, error) {
 		env_closure := newEnv(env, params, callerArgs)
 		return stdDo(env_closure, args[1:])
 	}), nil
+}
+
+func stdPrint(env *Env, args []Expr) (Expr, error) {
+	if err := reqArgCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	src := printExpr(args[0], true)
+	os.Stdout.WriteString(src + "\n")
+	return exprNil, nil
+}
+
+func stdList(env *Env, args []Expr) (Expr, error) {
+	return ExprList(args), nil
+}
+
+func stdIs(env *Env, args []Expr) (Expr, error) {
+	if err := reqArgCountExactly(2, args); err != nil {
+		return nil, err
+	}
+	kind, err := reqType[ExprKeyword](args[0])
+	if err != nil {
+		return nil, err
+	}
+	var ok bool
+	switch kind {
+	case ":list":
+		_, ok = args[1].(ExprList)
+	case ":ident":
+		_, ok = args[1].(ExprIdent)
+	case ":str":
+		_, ok = args[1].(ExprStr)
+	case ":num":
+		_, ok = args[1].(ExprNum)
+	case ":vec":
+		_, ok = args[1].(ExprVec)
+	case ":hashmap":
+		_, ok = args[1].(ExprHashMap)
+	case ":fn":
+		_, ok = args[1].(ExprFunc)
+	case ":keyword":
+		_, ok = args[1].(ExprKeyword)
+	default:
+		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`", kind)
+	}
+	return exprBool(ok), nil
+}
+
+func stdIsEmpty(env *Env, args []Expr) (Expr, error) {
+	if err := reqArgCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	list, err := reqType[ExprList](args[0])
+	if err != nil {
+		return nil, err
+	}
+	return exprBool(len(list) == 0), nil
+}
+
+func stdCount(env *Env, args []Expr) (Expr, error) {
+	if err := reqArgCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	list, err := reqType[ExprList](args[0])
+	if err != nil {
+		return nil, err
+	}
+	return ExprNum(len(list)), nil
+}
+
+func compare(args []Expr) (int, error) {
+	if err := reqArgCountExactly(2, args); err != nil {
+		return 0, err
+	}
+	switch it := args[0].(type) {
+	case ExprNum:
+		if other, ok := args[1].(ExprNum); ok {
+			return cmp.Compare(it, other), nil
+		}
+	case ExprStr:
+		if other, ok := args[1].(ExprStr); ok {
+			return cmp.Compare(it, other), nil
+		}
+	case ExprKeyword:
+		if other, ok := args[1].(ExprKeyword); ok {
+			return cmp.Compare(it, other), nil
+		}
+	}
+	return 0, fmt.Errorf("specified operands are not comparable")
+
+}
+
+func stdCmp(env *Env, args []Expr) (Expr, error) {
+	order, err := compare(args)
+	if err != nil {
+		return nil, err
+	}
+	return ExprNum(order), nil
+}
+func stdLt(env *Env, args []Expr) (Expr, error) {
+	order, err := compare(args)
+	if err != nil {
+		return nil, err
+	}
+	return exprBool(order == -1), nil
+}
+func stdLe(env *Env, args []Expr) (Expr, error) {
+	order, err := compare(args)
+	if err != nil {
+		return nil, err
+	}
+	return exprBool(order <= 0), nil
+}
+func stdGt(env *Env, args []Expr) (Expr, error) {
+	order, err := compare(args)
+	if err != nil {
+		return nil, err
+	}
+	return exprBool(order == 1), nil
+}
+func stdGe(env *Env, args []Expr) (Expr, error) {
+	order, err := compare(args)
+	if err != nil {
+		return nil, err
+	}
+	return exprBool(order >= 0), nil
 }
