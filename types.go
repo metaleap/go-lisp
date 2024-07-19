@@ -2,46 +2,30 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 )
 
-// Errors/Exceptions
-type MalError struct {
-	Obj MalType
-}
-
-func (e MalError) Error() string {
-	return fmt.Sprintf("%#v", e.Obj)
-}
-
 // General types
-type MalType interface {
-}
-
-type EnvType interface {
-	Find(key Symbol) EnvType
-	Set(key Symbol, value MalType) MalType
-	Get(key Symbol) (MalType, error)
+type Expr interface {
 }
 
 // Scalars
-func Nil_Q(obj MalType) bool {
+func Nil_Q(obj Expr) bool {
 	return obj == nil
 }
 
-func True_Q(obj MalType) bool {
+func True_Q(obj Expr) bool {
 	b, ok := obj.(bool)
 	return ok && b
 }
 
-func False_Q(obj MalType) bool {
+func False_Q(obj Expr) bool {
 	b, ok := obj.(bool)
 	return ok && !b
 }
 
-func Number_Q(obj MalType) bool {
+func Number_Q(obj Expr) bool {
 	_, ok := obj.(int)
 	return ok
 }
@@ -51,54 +35,54 @@ type Symbol struct {
 	Val string
 }
 
-func Symbol_Q(obj MalType) bool {
+func Symbol_Q(obj Expr) bool {
 	_, ok := obj.(Symbol)
 	return ok
 }
 
 // Keywords
-func NewKeyword(s string) (MalType, error) {
+func NewKeyword(s string) (Expr, error) {
 	return "\u029e" + s, nil
 }
 
-func Keyword_Q(obj MalType) bool {
+func Keyword_Q(obj Expr) bool {
 	s, ok := obj.(string)
 	return ok && strings.HasPrefix(s, "\u029e")
 }
 
 // Strings
-func String_Q(obj MalType) bool {
+func String_Q(obj Expr) bool {
 	_, ok := obj.(string)
 	return ok
 }
 
 // Functions
 type Func struct {
-	Fn   func([]MalType) (MalType, error)
-	Meta MalType
+	Fn   func([]Expr) (Expr, error)
+	Meta Expr
 }
 
-func Func_Q(obj MalType) bool {
+func Func_Q(obj Expr) bool {
 	_, ok := obj.(Func)
 	return ok
 }
 
 type MalFunc struct {
-	Eval    func(MalType, EnvType) (MalType, error)
-	Exp     MalType
-	Env     EnvType
-	Params  MalType
+	Eval    func(Expr, *Env) (Expr, error)
+	Exp     Expr
+	Env     *Env
+	Params  Expr
 	IsMacro bool
-	GenEnv  func(EnvType, MalType, MalType) (EnvType, error)
-	Meta    MalType
+	GenEnv  func(*Env, Expr, Expr) (*Env, error)
+	Meta    Expr
 }
 
-func MalFunc_Q(obj MalType) bool {
+func MalFunc_Q(obj Expr) bool {
 	_, ok := obj.(MalFunc)
 	return ok
 }
 
-func (f MalFunc) SetMacro() MalType {
+func (f MalFunc) SetMacro() Expr {
 	f.IsMacro = true
 	return f
 }
@@ -109,7 +93,7 @@ func (f MalFunc) GetMacro() bool {
 
 // Take either a MalFunc or regular function and apply it to the
 // arguments
-func Apply(f_mt MalType, a []MalType) (MalType, error) {
+func Apply(f_mt Expr, a []Expr) (Expr, error) {
 	switch f := f_mt.(type) {
 	case MalFunc:
 		env, e := f.GenEnv(f.Env, f.Params, List{a, nil})
@@ -119,7 +103,7 @@ func Apply(f_mt MalType, a []MalType) (MalType, error) {
 		return f.Eval(f.Exp, env)
 	case Func:
 		return f.Fn(a)
-	case func([]MalType) (MalType, error):
+	case func([]Expr) (Expr, error):
 		return f(a)
 	default:
 		return nil, errors.New("invalid function to Apply")
@@ -128,31 +112,31 @@ func Apply(f_mt MalType, a []MalType) (MalType, error) {
 
 // Lists
 type List struct {
-	Val  []MalType
-	Meta MalType
+	Val  []Expr
+	Meta Expr
 }
 
-func NewList(a ...MalType) MalType {
+func NewList(a ...Expr) Expr {
 	return List{a, nil}
 }
 
-func List_Q(obj MalType) bool {
+func List_Q(obj Expr) bool {
 	_, ok := obj.(List)
 	return ok
 }
 
 // Vectors
 type Vector struct {
-	Val  []MalType
-	Meta MalType
+	Val  []Expr
+	Meta Expr
 }
 
-func Vector_Q(obj MalType) bool {
+func Vector_Q(obj Expr) bool {
 	_, ok := obj.(Vector)
 	return ok
 }
 
-func GetSlice(seq MalType) ([]MalType, error) {
+func GetSlice(seq Expr) ([]Expr, error) {
 	switch obj := seq.(type) {
 	case List:
 		return obj.Val, nil
@@ -165,11 +149,11 @@ func GetSlice(seq MalType) ([]MalType, error) {
 
 // Hash Maps
 type HashMap struct {
-	Val  map[string]MalType
-	Meta MalType
+	Val  map[string]Expr
+	Meta Expr
 }
 
-func NewHashMap(seq MalType) (MalType, error) {
+func NewHashMap(seq Expr) (Expr, error) {
 	lst, e := GetSlice(seq)
 	if e != nil {
 		return nil, e
@@ -177,7 +161,7 @@ func NewHashMap(seq MalType) (MalType, error) {
 	if len(lst)%2 == 1 {
 		return nil, errors.New("odd number of arguments to NewHashMap")
 	}
-	m := map[string]MalType{}
+	m := map[string]Expr{}
 	for i := 0; i < len(lst); i += 2 {
 		str, ok := lst[i].(string)
 		if !ok {
@@ -188,37 +172,37 @@ func NewHashMap(seq MalType) (MalType, error) {
 	return HashMap{m, nil}, nil
 }
 
-func HashMap_Q(obj MalType) bool {
+func HashMap_Q(obj Expr) bool {
 	_, ok := obj.(HashMap)
 	return ok
 }
 
 // Atoms
 type Atom struct {
-	Val  MalType
-	Meta MalType
+	Val  Expr
+	Meta Expr
 }
 
-func (a *Atom) Set(val MalType) MalType {
+func (a *Atom) Set(val Expr) Expr {
 	a.Val = val
 	return a
 }
 
-func Atom_Q(obj MalType) bool {
+func Atom_Q(obj Expr) bool {
 	_, ok := obj.(*Atom)
 	return ok
 }
 
 // General functions
 
-func _obj_type(obj MalType) string {
+func _obj_type(obj Expr) string {
 	if obj == nil {
 		return "nil"
 	}
 	return reflect.TypeOf(obj).Name()
 }
 
-func Sequential_Q(seq MalType) bool {
+func Sequential_Q(seq Expr) bool {
 	if seq == nil {
 		return false
 	}
@@ -226,7 +210,7 @@ func Sequential_Q(seq MalType) bool {
 		(reflect.TypeOf(seq).Name() == "Vector")
 }
 
-func Equal_Q(a MalType, b MalType) bool {
+func Equal_Q(a Expr, b Expr) bool {
 	ota := reflect.TypeOf(a)
 	otb := reflect.TypeOf(b)
 	if !((ota == otb) || (Sequential_Q(a) && Sequential_Q(b))) {

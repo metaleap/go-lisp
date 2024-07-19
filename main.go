@@ -7,24 +7,28 @@ import (
 	"strings"
 )
 
-// read
-func READ(str string) string {
-	return str
+func replRead(str string) (Expr, error) {
+	return Read_str(str)
 }
 
-// eval
-func EVAL(ast string, env string) string {
-	return ast
+func replEval(expr Expr, env *Env) (Expr, error) {
+	return eval(expr, env)
 }
 
-// print
-func PRINT(exp string) string {
-	return exp
+func replPrint(expr Expr) string {
+	return Pr_str(expr, true)
 }
 
-// repl
-func rep(str string) string {
-	return PRINT(EVAL(READ(str), ""))
+func repl(str string) (string, error) {
+	expr, err := replRead(str)
+	if err != nil {
+		return "", err
+	}
+	expr, err = replEval(expr, &repl_env)
+	if err != nil {
+		return "", err
+	}
+	return replPrint(expr), nil
 }
 
 func main() {
@@ -32,8 +36,13 @@ func main() {
 	// repl loop
 	fmt.Print("\nrepl> ")
 	for readln.Scan() {
-		text := strings.TrimSpace(readln.Text())
-		fmt.Println(rep(text))
+		input := strings.TrimSpace(readln.Text())
+		output, err := repl(input)
+		if err != nil {
+			os.Stderr.WriteString(err.Error())
+		} else {
+			fmt.Println(output)
+		}
 		fmt.Print("\nrepl> ")
 	}
 	if err := readln.Err(); err != nil {

@@ -48,7 +48,7 @@ func tokenize(str string) []string {
 	return results
 }
 
-func read_atom(rdr Reader) (MalType, error) {
+func read_atom(rdr Reader) (Expr, error) {
 	token := rdr.next()
 	if token == nil {
 		return nil, errors.New("read_atom underflow")
@@ -85,7 +85,7 @@ func read_atom(rdr Reader) (MalType, error) {
 	}
 }
 
-func read_list(rdr Reader, start string, end string) (MalType, error) {
+func read_list(rdr Reader, start string, end string) (Expr, error) {
 	token := rdr.next()
 	if token == nil {
 		return nil, errors.New("read_list underflow")
@@ -94,7 +94,7 @@ func read_list(rdr Reader, start string, end string) (MalType, error) {
 		return nil, errors.New("expected '" + start + "'")
 	}
 
-	ast_list := []MalType{}
+	ast_list := []Expr{}
 	token = rdr.peek()
 	for ; true; token = rdr.peek() {
 		if token == nil {
@@ -113,7 +113,7 @@ func read_list(rdr Reader, start string, end string) (MalType, error) {
 	return List{ast_list, nil}, nil
 }
 
-func read_vector(rdr Reader) (MalType, error) {
+func read_vector(rdr Reader) (Expr, error) {
 	lst, e := read_list(rdr, "[", "]")
 	if e != nil {
 		return nil, e
@@ -122,7 +122,7 @@ func read_vector(rdr Reader) (MalType, error) {
 	return vec, nil
 }
 
-func read_hash_map(rdr Reader) (MalType, error) {
+func read_hash_map(rdr Reader) (Expr, error) {
 	mal_lst, e := read_list(rdr, "{", "}")
 	if e != nil {
 		return nil, e
@@ -130,7 +130,7 @@ func read_hash_map(rdr Reader) (MalType, error) {
 	return NewHashMap(mal_lst)
 }
 
-func read_form(rdr Reader) (MalType, error) {
+func read_form(rdr Reader) (Expr, error) {
 	token := rdr.peek()
 	if token == nil {
 		return nil, errors.New("read_form underflow")
@@ -143,28 +143,28 @@ func read_form(rdr Reader) (MalType, error) {
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"quote"}, form}, nil}, nil
+		return List{[]Expr{Symbol{"quote"}, form}, nil}, nil
 	case "`":
 		rdr.next()
 		form, e := read_form(rdr)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"quasiquote"}, form}, nil}, nil
+		return List{[]Expr{Symbol{"quasiquote"}, form}, nil}, nil
 	case `~`:
 		rdr.next()
 		form, e := read_form(rdr)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"unquote"}, form}, nil}, nil
+		return List{[]Expr{Symbol{"unquote"}, form}, nil}, nil
 	case `~@`:
 		rdr.next()
 		form, e := read_form(rdr)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"splice-unquote"}, form}, nil}, nil
+		return List{[]Expr{Symbol{"splice-unquote"}, form}, nil}, nil
 	case `^`:
 		rdr.next()
 		meta, e := read_form(rdr)
@@ -175,14 +175,14 @@ func read_form(rdr Reader) (MalType, error) {
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"with-meta"}, form, meta}, nil}, nil
+		return List{[]Expr{Symbol{"with-meta"}, form, meta}, nil}, nil
 	case `@`:
 		rdr.next()
 		form, e := read_form(rdr)
 		if e != nil {
 			return nil, e
 		}
-		return List{[]MalType{Symbol{"deref"}, form}, nil}, nil
+		return List{[]Expr{Symbol{"deref"}, form}, nil}, nil
 
 	// list
 	case ")":
@@ -206,7 +206,7 @@ func read_form(rdr Reader) (MalType, error) {
 	}
 }
 
-func Read_str(str string) (MalType, error) {
+func Read_str(str string) (Expr, error) {
 	var tokens = tokenize(str)
 	if len(tokens) == 0 {
 		return nil, errors.New("<empty line>")

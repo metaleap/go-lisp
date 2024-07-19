@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func Pr_list(lst []MalType, pr bool, start string, end string, join string) string {
+func Pr_list(lst []Expr, pr bool, start string, end string, join string) string {
 	str_list := make([]string, 0, len(lst))
 	for _, e := range lst {
 		str_list = append(str_list, Pr_str(e, pr))
@@ -13,7 +13,7 @@ func Pr_list(lst []MalType, pr bool, start string, end string, join string) stri
 	return start + strings.Join(str_list, join) + end
 }
 
-func Pr_str(obj MalType, printReadably bool) string {
+func Pr_str(obj Expr, printReadably bool) string {
 	switch tobj := obj.(type) {
 	case List:
 		return Pr_list(tobj.Val, printReadably, "(", ")", " ")
@@ -46,7 +46,7 @@ func Pr_str(obj MalType, printReadably bool) string {
 		return "(fn* " +
 			Pr_str(tobj.Params, true) + " " +
 			Pr_str(tobj.Exp, true) + ")"
-	case func([]MalType) (MalType, error):
+	case func([]Expr) (Expr, error):
 		return fmt.Sprintf("<function %v>", obj)
 	case *Atom:
 		return "(atom " +
