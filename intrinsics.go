@@ -7,10 +7,11 @@ import (
 
 func init() {
 	for k, v := range map[ExprIdent]Expr{
-		"def":   ExprFunc(stdDef),
-		"set":   ExprFunc(stdSet),
-		"let":   ExprFunc(stdLet),
-		"begin": ExprFunc(stdBegin),
+		"def": ExprFunc(stdDef),
+		"set": ExprFunc(stdSet),
+		"let": ExprFunc(stdLet),
+		"do":  ExprFunc(stdDo),
+		"if":  ExprFunc(stdIf),
 	} {
 		envUnEvals.Map[k] = v
 	}
@@ -19,24 +20,17 @@ func init() {
 		"-": ExprFunc(stdSub),
 		"*": ExprFunc(stdMul),
 		"/": ExprFunc(stdDiv),
+		"=": ExprFunc(stdEq),
 	} {
 		envMain.Map[k] = v
 	}
 }
 
 var (
-	exprTrue  = ExprIdent("true")
-	exprFalse = ExprIdent("false")
-	exprNil   = ExprIdent("nil")
+	exprTrue  = ExprKeyword(":true")
+	exprFalse = ExprKeyword(":false")
+	exprNil   = ExprKeyword(":nil")
 )
-
-func mustType[T any](have Expr) (T, error) {
-	ret, ok := have.(T)
-	if !ok {
-		return ret, fmt.Errorf("expected %T, not %T", ret, have)
-	}
-	return ret, nil
-}
 
 func mustArgCountExactly(want int, have []Expr) error {
 	if len(have) != want {
@@ -50,6 +44,25 @@ func mustArgCountAtLeast(want int, have []Expr) error {
 		return fmt.Errorf("expected at least %d args, not %d", want, len(have))
 	}
 	return nil
+}
+
+func mustType[T any](have Expr) (T, error) {
+	ret, ok := have.(T)
+	if !ok {
+		return ret, fmt.Errorf("expected %T, not %T", ret, have)
+	}
+	return ret, nil
+}
+
+func mustSeq(expr Expr) ([]Expr, error) {
+	switch expr := expr.(type) {
+	case ExprList:
+		return ([]Expr)(expr), nil
+	case ExprVec:
+		return ([]Expr)(expr), nil
+	default:
+		return nil, fmt.Errorf("expected list or vector, not %T", expr)
+	}
 }
 
 func stdAdd(env *Env, args []Expr) (Expr, error) {
@@ -128,7 +141,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
 	}
 	if isDef && env.hasOwn(name) {
 		return nil, errors.New("already defined: " + string(name))
-	} else if _, err := env.Get(name); (!isDef) && err != nil {
+	} else if _, err := env.get(name); (!isDef) && err != nil {
 		return nil, err
 	}
 
@@ -136,11 +149,11 @@ func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	env.Set(name, expr)
+	env.set(name, expr)
 	return expr, nil
 }
 
-func stdBegin(env *Env, args []Expr) (expr Expr, err error) {
+func stdDo(env *Env, args []Expr) (expr Expr, err error) {
 	if err = mustArgCountAtLeast(1, args); err != nil {
 		return
 	}
@@ -160,7 +173,7 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	let_env := Env{Parent: env, Map: make(map[ExprIdent]Expr, len(bindings))}
+	let_env := newEnv(env)
 	for _, binding := range bindings {
 		pair, err := mustSeq(binding)
 		if err != nil {
@@ -173,11 +186,44 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr, err := eval(&let_env, pair[1])
+		expr, err := eval(let_env, pair[1])
 		if err != nil {
 			return nil, err
 		}
-		let_env.Set(name, expr)
+		let_env.set(name, expr)
 	}
-	return stdBegin(&let_env, args[1:])
+	return stdDo(let_env, args[1:])
+}
+
+func stdEq(env *Env, args []Expr) (Expr, error) {
+	if err := mustArgCountExactly(2, args); err != nil {
+		return nil, err
+	}
+	expr1, err := eval(env, args[0])
+	if err != nil {
+		return nil, err
+	}
+	expr2, err := eval(env, args[1])
+	if err != nil {
+		return nil, err
+	}
+	if isEq(expr1, expr2) {
+		return exprTrue, nil
+	}
+	return exprFalse, nil
+}
+
+func stdIf(env *Env, args []Expr) (Expr, error) {
+	if err := mustArgCountExactly(3, args); err != nil {
+		return nil, err
+	}
+	expr, err := eval(env, args[0])
+	if err != nil {
+		return nil, err
+	}
+	idx := 1
+	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
+		idx = 2
+	}
+	return eval(env, args[idx])
 }

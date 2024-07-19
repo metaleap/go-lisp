@@ -24,7 +24,7 @@ func repl(str string) (string, error) {
 	if err != nil || expr == nil {
 		return "", err
 	}
-	expr, err = replEval(expr, &envMain)
+	expr, err = replEval(expr, envMain)
 	if err != nil {
 		return "", err
 	}

@@ -8,7 +8,7 @@ import (
 func eval(env *Env, expr Expr) (Expr, error) {
 	switch it := expr.(type) {
 	case ExprIdent:
-		return env.Get(it)
+		return env.get(it)
 	case ExprVec:
 		var err error
 		vec := make(ExprVec, len(it))

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -76,17 +75,6 @@ type ExprVec []Expr
 func isVec(expr Expr) bool {
 	_, ok := expr.(ExprVec)
 	return ok
-}
-
-func mustSeq(expr Expr) ([]Expr, error) {
-	switch expr := expr.(type) {
-	case ExprList:
-		return ([]Expr)(expr), nil
-	case ExprVec:
-		return ([]Expr)(expr), nil
-	default:
-		return nil, fmt.Errorf("expected list or vector, not %T", expr)
-	}
 }
 
 // Hash Maps
