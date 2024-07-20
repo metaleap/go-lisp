@@ -564,10 +564,21 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, nil, err
 	}
-	list, err := checkIs[ExprList](args[0])
-	if err != nil {
-		return nil, nil, err
+	list, is_list := args[0].(ExprList)
+	if !is_list {
+		return stdQuote(env, args)
 	}
+
+	if unquote, ok, err := is_list_starting_with_ident(list, exprUnquote, 2); err != nil {
+		return nil, nil, err
+	} else if ok {
+		if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
+			return nil, nil, err
+		} else {
+			return nil, unquoted, nil
+		}
+	}
+
 	expr := make(ExprList, 0, len(list))
 	for _, item := range list {
 		if unquote, ok, err := is_list_starting_with_ident(item, exprUnquote, 2); err != nil {
@@ -581,7 +592,11 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 		} else if splice_unquote, ok, err := is_list_starting_with_ident(item, exprSpliceUnquote, 2); err != nil {
 			return nil, nil, err
 		} else if ok {
-			splicees, err := checkIs[ExprList](splice_unquote[1])
+			evaled, err := evalAndApply(env, splice_unquote[1])
+			if err != nil {
+				return nil, nil, err
+			}
+			splicees, err := checkIs[ExprList](evaled)
 			if err != nil {
 				return nil, nil, err
 			}
