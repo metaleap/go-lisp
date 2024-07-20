@@ -53,13 +53,14 @@ var (
 
 func init() { // in here, rather than above, to avoid "initialization cycle" error:
 	specialForms = map[ExprIdent]FnSpecial{
-		"def":     stdDef,
-		"set":     stdSet,
-		"let":     stdLet,
-		exprDo:    stdDo,
-		"if":      stdIf,
-		"fn":      stdFn,
-		exprQuote: stdQuote,
+		"def":          stdDef,
+		"set":          stdSet,
+		"if":           stdIf,
+		"let":          stdLet,
+		"fn":           stdFn,
+		exprDo:         stdDo,
+		exprQuote:      stdQuote,
+		exprQuasiQuote: stdQuasiQuote,
 	}
 	envMain.Map["eval"] = ExprFunc(stdEval)
 }
@@ -548,37 +549,52 @@ func stdConcat(args []Expr) (Expr, error) {
 	return list, nil
 }
 
-func quasiQuote(expr Expr) (Expr, error) {
-	switch it := expr.(type) {
-	case ExprIdent, ExprHashMap:
-		return ExprList{exprQuote, expr}, nil
-	case ExprList:
-		if len(it) > 0 {
-			switch {
-			case isListStartingWithIdent(it, exprUnquote):
-				if err := checkArgsCountExactly(1, it[1:]); err != nil {
-					return nil, err
+func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
+	is_list_starting_with_ident := func(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ ExprList, _ bool, err error) {
+		if list, _ := maybeList.(ExprList); len(list) > 0 {
+			if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
+				if err := checkArgsCountExactly(mustHaveLen, list); err == nil {
+					return list, true, nil
 				}
-				return it[1], nil
-			default:
-				var list ExprList
-				for _, item := range it {
-					if isListStartingWithIdent(item, exprSpliceUnquote) {
-						if err := checkArgsCountExactly(1, item.(ExprList)[1:]); err != nil {
-							return nil, err
-						}
-						list = append(ExprList{exprConcat, item.(ExprList)[1]}, list...)
-					} else {
-						sub, err := quasiQuote(item)
-						if err != nil {
-							return nil, err
-						}
-						list = append(ExprList{exprCons, sub}, list...)
-					}
-				}
-				return list, nil
 			}
 		}
+		return
 	}
-	return expr, nil
+
+	if err := checkArgsCountExactly(1, args); err != nil {
+		return nil, nil, err
+	}
+	list, err := checkIs[ExprList](args[0])
+	if err != nil {
+		return nil, nil, err
+	}
+	expr := make(ExprList, 0, len(list))
+	for _, item := range list {
+		if unquote, ok, err := is_list_starting_with_ident(item, exprUnquote, 2); err != nil {
+			return nil, nil, err
+		} else if ok {
+			if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
+				return nil, nil, err
+			} else {
+				expr = append(expr, unquoted)
+			}
+		} else if splice_unquote, ok, err := is_list_starting_with_ident(item, exprSpliceUnquote, 2); err != nil {
+			return nil, nil, err
+		} else if ok {
+			splicees, err := checkIs[ExprList](splice_unquote[1])
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, splicee := range splicees {
+				if unquoted, err := evalAndApply(env, splicee); err != nil {
+					return nil, nil, err
+				} else {
+					expr = append(expr, unquoted)
+				}
+			}
+		} else {
+			expr = append(expr, item)
+		}
+	}
+	return nil, expr, nil
 }
