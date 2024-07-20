@@ -47,6 +47,7 @@ var (
 		"atomSwap":     ExprFunc(stdAtomSwap),
 		exprCons:       ExprFunc(stdCons),
 		exprConcat:     ExprFunc(stdConcat),
+		"vec":          ExprFunc(stdVec),
 	}}
 	specialForms map[ExprIdent]FnSpecial
 )
@@ -564,12 +565,13 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, nil, err
 	}
-	list, is_list := args[0].(ExprList)
-	if !is_list {
+	_, is_vec := args[0].(ExprVec)
+	list, not_a_seq := checkIsSeq(args[0])
+	if not_a_seq != nil {
 		return stdQuote(env, args)
 	}
 
-	if unquote, ok, err := is_list_starting_with_ident(list, exprUnquote, 2); err != nil {
+	if unquote, ok, err := is_list_starting_with_ident(args[0], exprUnquote, 2); err != nil {
 		return nil, nil, err
 	} else if ok {
 		if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
@@ -608,8 +610,29 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 				}
 			}
 		} else {
-			expr = append(expr, item)
+			_, evaled, err := stdQuasiQuote(env, []Expr{item})
+			if err != nil {
+				return nil, nil, err
+			}
+			expr = append(expr, evaled)
 		}
 	}
+	if is_vec {
+		return nil, (ExprVec)(expr), nil
+	}
 	return nil, expr, nil
+}
+
+func stdVec(args []Expr) (Expr, error) {
+	if err := checkArgsCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	if vec, is_vec := args[0].(ExprVec); is_vec {
+		return vec, nil
+	}
+	list, err := checkIs[ExprList](args[0])
+	if err != nil {
+		return nil, err
+	}
+	return (ExprVec)(list), nil
 }
