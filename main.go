@@ -22,7 +22,7 @@ func main() {
 `
 
 	// load in the above mini-stdlib
-	if _, err := readAndEval("(" + string(exprDo) + " " + src_stdlib + "\n" + string(exprNil) + ")"); err != nil {
+	if _, err := readAndEval("(" + string(exprIdentDo) + " " + src_stdlib + "\n" + string(exprNil) + ")"); err != nil {
 		panic(err)
 	}
 

@@ -129,28 +129,28 @@ func readForm(r Reader) (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ExprList{exprQuote, form}, nil
+		return ExprList{exprIdentQuote, form}, nil
 	case "`":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{exprQuasiQuote, form}, nil
+		return ExprList{exprIdentQuasiQuote, form}, nil
 	case `~`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{exprUnquote, form}, nil
+		return ExprList{exprIdentUnquote, form}, nil
 	case `~@`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{exprSpliceUnquote, form}, nil
+		return ExprList{exprIdentSpliceUnquote, form}, nil
 	case `@`:
 		r.next()
 		form, e := readForm(r)

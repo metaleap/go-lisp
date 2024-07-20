@@ -33,9 +33,10 @@ type ExprHashMap map[ExprStr]Expr
 type ExprAtom struct{ Ref Expr }
 type ExprFunc func([]Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
-	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
-	body   Expr
-	env    *Env
+	params  []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
+	body    Expr
+	env     *Env
+	isMacro bool
 }
 
 func exprBool(b bool) ExprKeyword {
@@ -65,6 +66,17 @@ func compare(args []Expr) (int, error) {
 func isListOrVec(seq Expr) bool {
 	ty := reflect.TypeOf(seq)
 	return (ty == reflect.TypeFor[ExprList]()) || (ty == reflect.TypeFor[ExprVec]())
+}
+
+func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
+	if list, _ := maybeList.(ExprList); len(list) > 0 {
+		if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
+			if err := checkArgsCountExactly(mustHaveLen, list); err == nil {
+				return list, true, nil
+			}
+		}
+	}
+	return
 }
 
 func isEq(arg1 Expr, arg2 Expr) bool {

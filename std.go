@@ -6,66 +6,67 @@ import (
 )
 
 var (
-	exprTrue          = ExprKeyword(":true")
-	exprFalse         = ExprKeyword(":false")
-	exprNil           = ExprKeyword(":nil")
-	exprDo            = ExprIdent("do")
-	exprQuote         = ExprIdent("quote")
-	exprQuasiQuote    = ExprIdent("quasiQuote")
-	exprUnquote       = ExprIdent("unquote")
-	exprSpliceUnquote = ExprIdent("spliceUnquote")
-	exprCons          = ExprIdent("cons")
-	exprConcat        = ExprIdent("concat")
+	exprTrue               = ExprKeyword(":true")
+	exprFalse              = ExprKeyword(":false")
+	exprNil                = ExprKeyword(":nil")
+	exprIdentDo            = ExprIdent("do")
+	exprIdentQuote         = ExprIdent("quote")
+	exprIdentQuasiQuote    = ExprIdent("quasiQuote")
+	exprIdentUnquote       = ExprIdent("unquote")
+	exprIdentSpliceUnquote = ExprIdent("spliceUnquote")
+	exprIdentCons          = ExprIdent("cons")
+	exprIdentConcat        = ExprIdent("concat")
+	exprIdentMacro         = ExprIdent("macro")
 
 	envMain = Env{Map: map[ExprIdent]Expr{
-		"osArgs":       ExprList{}, // populated by `main` when running a user-specified source file
-		"print":        ExprFunc(stdPrint),
-		"println":      ExprFunc(stdPrintln),
-		"str":          ExprFunc(stdStr),
-		"show":         ExprFunc(stdShow),
-		"list":         ExprFunc(stdList),
-		"is":           ExprFunc(stdIs),
-		"isEmpty":      ExprFunc(stdIsEmpty),
-		"count":        ExprFunc(stdCount),
-		"cmp":          ExprFunc(stdCmp),
-		"+":            ExprFunc(stdAdd),
-		"-":            ExprFunc(stdSub),
-		"*":            ExprFunc(stdMul),
-		"/":            ExprFunc(stdDiv),
-		"=":            ExprFunc(stdEq),
-		"<":            ExprFunc(stdLt),
-		">":            ExprFunc(stdGt),
-		"<=":           ExprFunc(stdLe),
-		">=":           ExprFunc(stdGe),
-		"readExpr":     ExprFunc(stdReadExpr),
-		"readTextFile": ExprFunc(stdReadTextFile),
-		"atomFrom":     ExprFunc(stdAtomFrom),
-		"atomGet":      ExprFunc(stdAtomGet),
-		"atomSet":      ExprFunc(stdAtomSet),
-		"atomSwap":     ExprFunc(stdAtomSwap),
-		exprCons:       ExprFunc(stdCons),
-		exprConcat:     ExprFunc(stdConcat),
-		"vec":          ExprFunc(stdVec),
+		"osArgs":        ExprList{}, // populated by `main` when running a user-specified source file
+		"print":         ExprFunc(stdPrint),
+		"println":       ExprFunc(stdPrintln),
+		"str":           ExprFunc(stdStr),
+		"show":          ExprFunc(stdShow),
+		"list":          ExprFunc(stdList),
+		"is":            ExprFunc(stdIs),
+		"isEmpty":       ExprFunc(stdIsEmpty),
+		"count":         ExprFunc(stdCount),
+		"cmp":           ExprFunc(stdCmp),
+		"+":             ExprFunc(stdAdd),
+		"-":             ExprFunc(stdSub),
+		"*":             ExprFunc(stdMul),
+		"/":             ExprFunc(stdDiv),
+		"=":             ExprFunc(stdEq),
+		"<":             ExprFunc(stdLt),
+		">":             ExprFunc(stdGt),
+		"<=":            ExprFunc(stdLe),
+		">=":            ExprFunc(stdGe),
+		"readExpr":      ExprFunc(stdReadExpr),
+		"readTextFile":  ExprFunc(stdReadTextFile),
+		"atomFrom":      ExprFunc(stdAtomFrom),
+		"atomGet":       ExprFunc(stdAtomGet),
+		"atomSet":       ExprFunc(stdAtomSet),
+		"atomSwap":      ExprFunc(stdAtomSwap),
+		exprIdentCons:   ExprFunc(stdCons),
+		exprIdentConcat: ExprFunc(stdConcat),
+		"vec":           ExprFunc(stdVec),
 	}}
 	specialForms map[ExprIdent]SpecialForm
 )
 
 func init() { // in here, rather than above, to avoid "initialization cycle" error:
 	specialForms = map[ExprIdent]SpecialForm{
-		"def":          stdDef,
-		"set":          stdSet,
-		"if":           stdIf,
-		"let":          stdLet,
-		"fn":           stdFn,
-		exprDo:         stdDo,
-		exprQuote:      stdQuote,
-		exprQuasiQuote: stdQuasiQuote,
+		"def":               stdDef,
+		"set":               stdSet,
+		"if":                stdIf,
+		"let":               stdLet,
+		"fn":                stdFn,
+		exprIdentDo:         stdDo,
+		exprIdentQuote:      stdQuote,
+		exprIdentQuasiQuote: stdQuasiQuote,
 	}
 	envMain.Map["eval"] = ExprFunc(stdEval)
 }
 
 func checkArgsCountExactly(want int, have []Expr) error {
-	if len(have) != want {
+	if (want >= 0) && (len(have) != want) {
 		return fmt.Errorf("expected %d arg(s), not %d", want, len(have))
 	}
 	return nil
@@ -180,12 +181,25 @@ func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 		return nil, nil, fmt.Errorf("cannot redefine `%s` (use `set` here instead of `def`)", name)
 	}
 
-	expr, err := evalAndApply(env, args[1])
-	if err != nil {
+	var ret Expr
+	if maybe_macro, is_macro, err := isListStartingWithIdent(args[1], exprIdentMacro, -1); err != nil {
+		return nil, nil, err
+	} else if is_macro {
+		_, maybe_macro, err := stdFn(env, maybe_macro[1:])
+		if err != nil {
+			return nil, nil, err
+		}
+		macro, err := checkIs[*ExprFn](maybe_macro)
+		if err != nil {
+			return nil, nil, err
+		}
+		macro.isMacro = true
+		ret = macro
+	} else if ret, err = evalAndApply(env, args[1]); err != nil {
 		return nil, nil, err
 	}
-	env.set(name, expr)
-	return nil, expr, nil
+	env.set(name, ret)
+	return nil, ret, nil
 }
 
 func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
@@ -262,7 +276,7 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	}
 	body := args[1]
 	if len(args) > 2 {
-		body = append(ExprList{exprDo}, args[1:]...)
+		body = append(ExprList{exprIdentDo}, args[1:]...)
 	}
 	var expr Expr = &ExprFn{params: params, body: body, env: env}
 	if disableTcoFuncs {
@@ -511,17 +525,6 @@ func stdConcat(args []Expr) (Expr, error) {
 }
 
 func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
-	is_list_starting_with_ident := func(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
-		if list, _ := maybeList.(ExprList); len(list) > 0 {
-			if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
-				if err := checkArgsCountExactly(mustHaveLen, list); err == nil {
-					return list, true, nil
-				}
-			}
-		}
-		return
-	}
-
 	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, nil, err
 	}
@@ -531,7 +534,7 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 		return stdQuote(env, args)
 	}
 
-	if unquote, ok, err := is_list_starting_with_ident(args[0], exprUnquote, 2); err != nil {
+	if unquote, ok, err := isListStartingWithIdent(args[0], exprIdentUnquote, 2); err != nil {
 		return nil, nil, err
 	} else if ok {
 		if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
@@ -543,7 +546,7 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 
 	expr := make(ExprList, 0, len(list))
 	for _, item := range list {
-		if unquote, ok, err := is_list_starting_with_ident(item, exprUnquote, 2); err != nil {
+		if unquote, ok, err := isListStartingWithIdent(item, exprIdentUnquote, 2); err != nil {
 			return nil, nil, err
 		} else if ok {
 			if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
@@ -551,7 +554,7 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 			} else {
 				expr = append(expr, unquoted)
 			}
-		} else if splice_unquote, ok, err := is_list_starting_with_ident(item, exprSpliceUnquote, 2); err != nil {
+		} else if splice_unquote, ok, err := isListStartingWithIdent(item, exprIdentSpliceUnquote, 2); err != nil {
 			return nil, nil, err
 		} else if ok {
 			evaled, err := evalAndApply(env, splice_unquote[1])
