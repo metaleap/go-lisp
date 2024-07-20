@@ -33,9 +33,12 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				case ExprFunc:
 					expr, err = fn(env, args)
 					env = nil
-				case ExprFn:
-					expr, err = fn.Call(env, args)
-					env = nil
+				case *ExprFn:
+					expr = fn.body
+					env, err = fn.newEnv(args)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}

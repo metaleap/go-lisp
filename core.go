@@ -258,20 +258,26 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := reqTypes[ExprIdent](params...); err != nil {
 		return nil, nil, err
 	}
-	return nil, ExprFn{
-		params: params,
-		body:   args[1:],
-		env:    env,
-	}, nil
+	body := args[1]
+	if len(args) > 2 {
+		body = append(ExprList{ExprIdent("do")}, args[1:]...)
+	}
+	return nil, &ExprFn{params: params, body: body, env: env}, nil
 }
 
-func (me *ExprFn) Call(_ *Env, callerArgs []Expr) (Expr, error) {
+func (me *ExprFn) newEnv(callerArgs []Expr) (*Env, error) {
 	if err := reqArgCountExactly(len(me.params), callerArgs); err != nil {
 		return nil, err
 	}
-	env_closure := newEnv(me.env, me.params, callerArgs)
-	_, expr, err := tmpDo(env_closure, me.body)
-	return expr, err
+	return newEnv(me.env, me.params, callerArgs), nil
+}
+
+func (me *ExprFn) Call(_ *Env, callerArgs []Expr) (Expr, error) {
+	env, err := me.newEnv(callerArgs)
+	if err != nil {
+		return nil, err
+	}
+	return evalAndApply(env, me.body)
 }
 
 func str(args []Expr, printReadably bool) string {

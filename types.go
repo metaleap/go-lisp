@@ -17,7 +17,7 @@ func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
 func (ExprFunc) isExpr()    {}
-func (ExprFn) isExpr()      {}
+func (*ExprFn) isExpr()     {}
 
 type ExprIdent string
 type ExprKeyword string
@@ -29,7 +29,7 @@ type ExprHashMap map[ExprStr]Expr
 type ExprFunc func(*Env, []Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice. `ExprFn` is a wrapper with `ExprFn.Call` being its `ExprFunc`.
 	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
-	body   []Expr
+	body   Expr
 	env    *Env
 }
 
