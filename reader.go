@@ -40,7 +40,7 @@ func (me *TokenReader) peek() *string {
 func tokenize(src string) []string {
 	results := make([]string, 0, 1)
 	// Work around lack of quoting in backtick
-	regex := regexp.MustCompile(`[\s,]*(~@|[\[\]{}()'` + "`" + `~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"` + "`" + `,;)]*)`)
+	regex := regexp.MustCompile(`[\s,]*(~@|[\[\]{}()'´` + "`" + `~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"` + "`" + `,;)]*)`)
 	for _, group := range regex.FindAllStringSubmatch(src, -1) {
 		if (group[1] == "") || (group[1][0] == ';') {
 			continue
@@ -123,35 +123,35 @@ func readForm(r Reader) (Expr, error) {
 	switch *token {
 
 	// short-hands
-	case `'`:
+	case "'":
 		r.next()
 		form, err := readForm(r)
 		if err != nil {
 			return nil, err
 		}
 		return ExprList{exprIdentQuote, form}, nil
-	case "`":
+	case "`", "´":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
 		return ExprList{exprIdentQuasiQuote, form}, nil
-	case `~`:
+	case "~":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
 		return ExprList{exprIdentUnquote, form}, nil
-	case `~@`:
+	case "~@":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
 		return ExprList{exprIdentSpliceUnquote, form}, nil
-	case `@`:
+	case "@":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {

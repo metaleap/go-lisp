@@ -35,6 +35,7 @@ var (
 		"cons":         ExprFunc(stdCons),
 		"concat":       ExprFunc(stdConcat),
 		"vec":          ExprFunc(stdVec),
+		"listAt":       ExprFunc(stdListAt),
 	}}
 )
 
@@ -54,6 +55,13 @@ func checkArgsCountAtLeast(want int, have []Expr) error {
 		return fmt.Errorf("expected at least %d arg(s), not %d", want, len(have))
 	}
 	return nil
+}
+
+func checkArgsCountInRange(wantAtLeast int, wantAtMost int, have []Expr) error {
+	if len(have) > wantAtMost {
+		return fmt.Errorf("expected %d to %d arg(s), not %d", wantAtLeast, wantAtMost, len(have))
+	}
+	return checkArgsCountAtLeast(wantAtLeast, have)
 }
 
 func checkIs[T Expr](have Expr) (T, error) {
@@ -360,4 +368,41 @@ func stdVec(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return (ExprVec)(list), nil
+}
+
+func stdListAt(args []Expr) (Expr, error) {
+	err := checkArgsCountInRange(2, 3, args)
+	if err != nil {
+		return nil, err
+	}
+	list, err := checkIs[ExprList](args[0])
+	if err != nil {
+		return nil, err
+	}
+	idx_start, err := checkIs[ExprNum](args[1])
+	if err != nil {
+		return nil, err
+	} else if idx_start < 0 {
+		idx_start = ExprNum(len(list) + int(idx_start))
+	}
+	if (int(idx_start) >= len(list)) || (idx_start < 0) {
+		return nil, fmt.Errorf("index %d out of range with list of length %d", idx_start, len(list))
+	}
+	is_range := (len(args) == 3)
+	if !is_range {
+		return list[idx_start], nil
+	}
+	idx_end, err := checkIs[ExprNum](args[2])
+	if err != nil {
+		return nil, err
+	} else if idx_end < 0 {
+		idx_end = ExprNum(len(list) + int(idx_end) + 1)
+	} else if idx_end < idx_start {
+		idx_end = ExprNum(len(list))
+	}
+	if (int(idx_end) > len(list)) || (idx_end < idx_start) {
+		return nil, fmt.Errorf("end index %d faulty with list of length %d and start index %d", idx_end, len(list), idx_start)
+	}
+
+	return list[idx_start:idx_end], nil
 }

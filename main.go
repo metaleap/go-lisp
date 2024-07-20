@@ -12,6 +12,12 @@ func main() {
 (def not
   (fn (b)
     (if b :false :true)))
+(def and
+  (macro (b1 b2)
+    ´(if ~b1 ~b2 :false)))
+(def or
+  (macro (b1 b2)
+    ´(if ~b1 :true ~b2)))
 
 (def loadFile
   (fn (srcFilePath)
@@ -19,6 +25,12 @@ func main() {
     (set src (str "(do " src "\n:nil)"))
     (def expr (readExpr src))
     (eval expr)))
+
+(def postfix
+  (macro (call)
+    (if (and (is :list call) (not (isEmpty call)))
+	  ´TODO
+	  ~call)))
 `
 
 	// load in the above mini-stdlib
