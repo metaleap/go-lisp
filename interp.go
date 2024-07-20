@@ -37,7 +37,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				default:
 					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", list[0]))
 				case ExprFunc:
-					expr, err = fn(env, args)
+					expr, err = fn(args)
 					env = nil
 				case *ExprFn:
 					expr = fn.body

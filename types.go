@@ -26,7 +26,7 @@ type ExprNum int
 type ExprList []Expr
 type ExprVec []Expr
 type ExprHashMap map[ExprStr]Expr
-type ExprFunc func(*Env, []Expr) (Expr, error)
+type ExprFunc func([]Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
 	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
 	body   Expr
@@ -34,7 +34,7 @@ type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would s
 }
 
 func newHashMap(seq Expr) (Expr, error) {
-	list, err := mustSeq(seq)
+	list, err := checkIsSeq(seq)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +66,8 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 	}
 	switch arg1.(type) {
 	case ExprVec, ExprList:
-		sl1, _ := mustSeq(arg1)
-		sl2, _ := mustSeq(arg2)
+		sl1, _ := checkIsSeq(arg1)
+		sl2, _ := checkIsSeq(arg2)
 		if len(sl1) != len(sl2) {
 			return false
 		}
