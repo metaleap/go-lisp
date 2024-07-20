@@ -44,12 +44,13 @@ var (
 
 func init() { // in here, rather than above, to avoid "initialization cycle" error:
 	specialForms = map[ExprIdent]FnSpecial{
-		"def": stdDef,
-		"set": stdSet,
-		"let": stdLet,
-		"do":  stdDo,
-		"if":  stdIf,
-		"fn":  stdFn,
+		"def":   stdDef,
+		"set":   stdSet,
+		"let":   stdLet,
+		"do":    stdDo,
+		"if":    stdIf,
+		"fn":    stdFn,
+		"quote": stdQuote,
 	}
 	envMain.Map["eval"] = ExprFunc(stdEval)
 }
@@ -506,4 +507,11 @@ func stdAtomSwap(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return atom.Ref, nil
+}
+
+func stdQuote(_ *Env, args []Expr) (*Env, Expr, error) {
+	if err := checkArgsCountExactly(1, args); err != nil {
+		return nil, nil, err
+	}
+	return nil, args[0], nil
 }
