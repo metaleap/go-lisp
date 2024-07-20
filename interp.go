@@ -7,8 +7,8 @@ import (
 
 const disableTcoFuncs = false
 
-// to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below
-// another way, run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
+// to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below.
+// another way: run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
 
 func evalAndApply(env *Env, expr Expr) (Expr, error) {
 	// id := time.Now().UnixNano()
@@ -19,7 +19,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 			expr, err = evalExpr(env, expr)
 			env = nil
 		} else {
-			var special_form FnSpecial
+			var special_form SpecialForm
 			if ident, _ := it[0].(ExprIdent); ident != "" {
 				special_form = specialForms[ident]
 			}
@@ -32,11 +32,10 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				if err != nil {
 					return nil, err
 				}
-				list := expr.(ExprList)
-				args := list[1:]
-				switch fn := list[0].(type) {
+				callee, args := expr.(ExprList)[0], expr.(ExprList)[1:]
+				switch fn := callee.(type) {
 				default:
-					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", list[0]))
+					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", callee))
 				case ExprFunc:
 					expr, err = fn(args)
 					env = nil

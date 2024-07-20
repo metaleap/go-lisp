@@ -2,48 +2,68 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
 
 func exprToString(expr Expr, srcLike bool) string {
-	print_list := func(lst []Expr, pr bool, opening string, closing string, sep string) string {
-		ret := make([]string, 0, len(lst))
-		for _, e := range lst {
-			ret = append(ret, exprToString(e, pr))
+	var buf strings.Builder
+	exprWriteTo(&buf, expr, srcLike)
+	return buf.String()
+}
+
+type Writer interface {
+	io.StringWriter
+	io.ByteWriter
+}
+
+func exprWriteTo(w Writer, expr Expr, srcLike bool) {
+	print_list := func(lst []Expr, opening byte, closing byte) {
+		w.WriteByte(opening)
+		for i, it := range lst {
+			if i > 0 {
+				w.WriteByte(' ')
+			}
+			exprWriteTo(w, it, srcLike)
 		}
-		return opening + strings.Join(ret, sep) + closing
+		w.WriteByte(closing)
 	}
 
 	switch it := expr.(type) {
 	case ExprList:
-		return print_list(it, srcLike, "(", ")", " ")
+		print_list(it, '(', ')')
 	case ExprVec:
-		return print_list(it, srcLike, "[", "]", " ")
+		print_list(it, '[', ']')
 	case ExprHashMap:
-		str_list := make([]string, 0, len(it)*2)
+		w.WriteByte('{')
 		for k, v := range it {
-			str_list = append(str_list, exprToString(k, srcLike), exprToString(v, srcLike))
+			w.WriteByte(' ')
+			w.WriteString(string(k))
+			w.WriteByte(' ')
+			exprWriteTo(w, v, srcLike)
 		}
-		return "{" + strings.Join(str_list, " ") + "}"
+		w.WriteString(" }")
 	case ExprIdent:
-		return string(it)
+		w.WriteString(string(it))
 	case ExprKeyword:
-		return string(it)
+		w.WriteString(string(it))
 	case ExprStr:
 		if srcLike {
-			return strconv.Quote(string(it))
+			w.WriteString(strconv.Quote(string(it)))
 		} else {
-			return string(it)
+			w.WriteString(string(it))
 		}
 	case ExprNum:
-		return strconv.Itoa(int(it))
+		w.WriteString(strconv.Itoa(int(it)))
 	case *ExprAtom:
 		if srcLike {
-			return fmt.Sprintf("(atom %s)", exprToString(it.Ref, true))
+			w.WriteString("(atom ")
+			exprWriteTo(w, it.Ref, true)
+			w.WriteByte(')')
 		}
-		return exprToString(it.Ref, false)
+		exprWriteTo(w, it.Ref, false)
 	default:
-		return fmt.Sprintf("%#v", it)
+		w.WriteString(fmt.Sprintf("%#v", it))
 	}
 }

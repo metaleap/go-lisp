@@ -1,10 +1,8 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"os"
-	"strings"
 )
 
 var (
@@ -49,11 +47,11 @@ var (
 		exprConcat:     ExprFunc(stdConcat),
 		"vec":          ExprFunc(stdVec),
 	}}
-	specialForms map[ExprIdent]FnSpecial
+	specialForms map[ExprIdent]SpecialForm
 )
 
 func init() { // in here, rather than above, to avoid "initialization cycle" error:
-	specialForms = map[ExprIdent]FnSpecial{
+	specialForms = map[ExprIdent]SpecialForm{
 		"def":          stdDef,
 		"set":          stdSet,
 		"if":           stdIf,
@@ -64,13 +62,6 @@ func init() { // in here, rather than above, to avoid "initialization cycle" err
 		exprQuasiQuote: stdQuasiQuote,
 	}
 	envMain.Map["eval"] = ExprFunc(stdEval)
-}
-
-func exprBool(b bool) ExprKeyword {
-	if b {
-		return exprTrue
-	}
-	return exprFalse
 }
 
 func checkArgsCountExactly(want int, have []Expr) error {
@@ -297,17 +288,6 @@ func (me *ExprFn) ToFunc() ExprFunc {
 	})
 }
 
-func str(args []Expr, printReadably bool) string {
-	var buf strings.Builder
-	for i, arg := range args {
-		if i > 0 && printReadably {
-			buf.WriteByte(' ')
-		}
-		buf.WriteString(exprToString(arg, printReadably))
-	}
-	return buf.String()
-}
-
 func stdPrint(args []Expr) (Expr, error) {
 	os.Stdout.WriteString(str(args, true))
 	return exprNil, nil
@@ -364,14 +344,11 @@ func stdIs(args []Expr) (Expr, error) {
 }
 
 func stdIsEmpty(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
-		return nil, err
-	}
-	list, err := checkIs[ExprList](args[0])
+	expr, err := stdCount(args)
 	if err != nil {
 		return nil, err
 	}
-	return exprBool(len(list) == 0), nil
+	return exprBool((expr.(ExprNum) == 0)), nil
 }
 
 func stdCount(args []Expr) (Expr, error) {
@@ -390,23 +367,6 @@ func stdEq(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return exprBool(isEq(args[0], args[1])), nil
-}
-
-func compare(args []Expr) (int, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
-		return 0, err
-	}
-	switch it := args[0].(type) {
-	case ExprNum:
-		if other, ok := args[1].(ExprNum); ok {
-			return cmp.Compare(it, other), nil
-		}
-	case ExprStr:
-		if other, ok := args[1].(ExprStr); ok {
-			return cmp.Compare(it, other), nil
-		}
-	}
-	return 0, fmt.Errorf("specified operands `%#v` and `%#v` are not comparable", args[0], args[1])
 }
 
 func stdCmp(args []Expr) (Expr, error) {

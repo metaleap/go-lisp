@@ -1,8 +1,11 @@
 package main
 
 import (
+	"cmp"
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 )
 
 type Expr interface {
@@ -35,23 +38,28 @@ type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would s
 	env    *Env
 }
 
-func newHashMap(seq Expr) (Expr, error) {
-	list, err := checkIsSeq(seq)
-	if err != nil {
-		return nil, err
+func exprBool(b bool) ExprKeyword {
+	if b {
+		return exprTrue
 	}
-	if (len(list) % 2) != 0 {
-		return nil, errors.New("odd number of arguments to NewHashMap")
+	return exprFalse
+}
+
+func compare(args []Expr) (int, error) {
+	if err := checkArgsCountExactly(2, args); err != nil {
+		return 0, err
 	}
-	hash_map := ExprHashMap{}
-	for i := 1; i < len(list); i += 2 {
-		str, ok := list[i-1].(ExprStr)
-		if !ok {
-			return nil, errors.New("expected hash-map key string")
+	switch it := args[0].(type) {
+	case ExprNum:
+		if other, ok := args[1].(ExprNum); ok {
+			return cmp.Compare(it, other), nil
 		}
-		hash_map[str] = list[i]
+	case ExprStr:
+		if other, ok := args[1].(ExprStr); ok {
+			return cmp.Compare(it, other), nil
+		}
 	}
-	return hash_map, nil
+	return 0, fmt.Errorf("specified operands `%#v` and `%#v` are not comparable", args[0], args[1])
 }
 
 func isListOrVec(seq Expr) bool {
@@ -91,4 +99,34 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 	default:
 		return arg1 == arg2
 	}
+}
+
+func newHashMap(seq Expr) (Expr, error) {
+	list, err := checkIsSeq(seq)
+	if err != nil {
+		return nil, err
+	}
+	if (len(list) % 2) != 0 {
+		return nil, errors.New("odd number of arguments to NewHashMap")
+	}
+	hash_map := ExprHashMap{}
+	for i := 1; i < len(list); i += 2 {
+		str, ok := list[i-1].(ExprStr)
+		if !ok {
+			return nil, errors.New("expected hash-map key string")
+		}
+		hash_map[str] = list[i]
+	}
+	return hash_map, nil
+}
+
+func str(args []Expr, printReadably bool) string {
+	var buf strings.Builder
+	for i, arg := range args {
+		if i > 0 && printReadably {
+			buf.WriteByte(' ')
+		}
+		exprWriteTo(&buf, arg, printReadably)
+	}
+	return buf.String()
 }

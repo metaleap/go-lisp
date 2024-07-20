@@ -21,6 +21,7 @@ func main() {
     (eval expr)))
 `
 
+	// load in the above mini-stdlib
 	if _, err := readAndEval("(" + string(exprDo) + " " + src_stdlib + "\n" + string(exprNil) + ")"); err != nil {
 		panic(err)
 	}
@@ -37,8 +38,7 @@ func main() {
 	// read-eval-print loop (REPL)
 	readln := bufio.NewScanner(os.Stdin) // want line-editing? just run with `rlwrap`
 	const prompt = "\n࿊  "
-	fmt.Print(prompt)
-	for readln.Scan() {
+	for fmt.Print(prompt); readln.Scan(); fmt.Print(prompt) {
 		input := strings.TrimSpace(readln.Text())
 		expr, err := readAndEval(input)
 		if err != nil {
@@ -47,7 +47,6 @@ func main() {
 		} else if output := exprToString(expr, true); output != "" {
 			fmt.Println(output)
 		}
-		fmt.Print(prompt)
 	}
 	if err := readln.Err(); err != nil {
 		panic(err)

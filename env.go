@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type FnSpecial = func(*Env, []Expr) (*Env, Expr, error)
+type SpecialForm = func(*Env, []Expr) (*Env, Expr, error)
 
 type Env struct {
 	Parent *Env

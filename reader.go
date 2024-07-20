@@ -2,8 +2,8 @@ package main
 
 // all adopted from github.com/kanaka/mal/blob/master/impls/go/src/reader/reader.go and restyled slightly
 
-// a mild incorrectness we accept for this repo: the parser (`readForm` and its callees)
-// ignores extraneous extra tokens after a complete-expression parse, they're discarded.
+// a mild incorrectness we accept for this repo: the parser (`readForm` and its callees) ignores
+// (ie. discards) extraneous extra tokens after a complete-expression parse (instead of erroring on them).
 
 import (
 	"errors"
