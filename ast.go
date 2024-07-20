@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+var (
+	exprTrue  = ExprKeyword(":true")
+	exprFalse = ExprKeyword(":false")
+	exprNil   = ExprKeyword(":nil")
+)
+
 type Expr interface {
 	isExpr()
 }
@@ -37,6 +43,22 @@ type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would s
 	body    Expr
 	env     *Env
 	isMacro bool
+}
+
+func (me *ExprFn) envWith(args []Expr) (*Env, error) {
+	if err := checkArgsCountExactly(len(me.params), args); err != nil {
+		return nil, err
+	}
+	return newEnv(me.env, me.params, args), nil
+}
+
+// note, `(*ExprFn).Call` is itself an `ExprFunc`
+func (me *ExprFn) Call(args []Expr) (Expr, error) {
+	env, err := me.envWith(args)
+	if err != nil {
+		return nil, err
+	}
+	return evalAndApply(env, me.body)
 }
 
 func exprBool(b bool) ExprKeyword {

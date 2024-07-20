@@ -18,9 +18,9 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 		if it, is_list := expr.(ExprList); (!is_list) || (len(it) == 0) {
 			expr, err = evalExpr(env, expr)
 			env = nil
-		} else if expr, err = macroExpand(env, it); err != nil {
+		} else if expr, err = macroExpand(env, it, nil); err != nil {
 			return nil, err
-		} else if it, is_list = expr.(ExprList); is_list && (len(it) > 0) { // macroExpand might have
+		} else if it, is_list = expr.(ExprList); is_list && (len(it) > 0) { // macroExpand might have returned a non-list
 			var special_form SpecialForm
 			if ident, _ := it[0].(ExprIdent); ident != "" {
 				special_form = specialForms[ident]
