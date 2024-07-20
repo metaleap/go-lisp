@@ -12,7 +12,7 @@ func replRead(str string) (Expr, error) {
 }
 
 func replEval(expr Expr, env *Env) (Expr, error) {
-	return eval(env, expr)
+	return evalAndApply(env, expr)
 }
 
 func replPrint(expr Expr) string {
@@ -33,7 +33,6 @@ func repl(str string) (string, error) {
 
 func main() {
 	readln := bufio.NewScanner(os.Stdin) // for line-editing, just run with `rlwrap`
-	// repl loop
 
 	// define `not` in source:
 	input := "(def not (fn (b) (if b :false :true)))"
@@ -41,12 +40,14 @@ func main() {
 		panic(err)
 	}
 
+	// repl loop
 	fmt.Print("\nrepl> ")
 	for readln.Scan() {
 		input := strings.TrimSpace(readln.Text())
 		output, err := repl(input)
 		if err != nil {
-			os.Stderr.WriteString(err.Error() + "\n")
+			msg := err.Error()
+			os.Stderr.WriteString(strings.Repeat("~", 2+len(msg)) + "\n " + msg + "\n" + strings.Repeat("~", 2+len(msg)) + "\n")
 		} else if output != "" {
 			fmt.Println(output)
 		}

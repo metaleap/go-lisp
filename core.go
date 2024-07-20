@@ -163,7 +163,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
 		return nil, err
 	}
 
-	expr, err := eval(env, args[1])
+	expr, err := evalAndApply(env, args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func stdDo(env *Env, args []Expr) (expr Expr, err error) {
 		return
 	}
 	for _, arg := range args {
-		if expr, err = eval(env, arg); err != nil {
+		if expr, err = evalAndApply(env, arg); err != nil {
 			return
 		}
 	}
@@ -204,7 +204,7 @@ func stdLet(env *Env, args []Expr) (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr, err := eval(let_env, pair[1])
+		expr, err := evalAndApply(let_env, pair[1])
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +224,7 @@ func stdIf(env *Env, args []Expr) (Expr, error) {
 	if err := reqArgCountExactly(3, args); err != nil {
 		return nil, err
 	}
-	expr, err := eval(env, args[0])
+	expr, err := evalAndApply(env, args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func stdIf(env *Env, args []Expr) (Expr, error) {
 	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
 		idx = 2
 	}
-	return eval(env, args[idx])
+	return evalAndApply(env, args[idx])
 }
 
 func stdFn(env *Env, args []Expr) (Expr, error) {
