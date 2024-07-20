@@ -8,14 +8,26 @@ import (
 )
 
 func main() {
-	readln := bufio.NewScanner(os.Stdin) // want line-editing? just run with `rlwrap`
+	src_stdlib := ` ; separate each top-level def by an empty line (ie. 2 newlines) due to the below hacky loading
+(def not
+  (fn (b)
+    (if b :false :true)))
 
-	// define `not` in source:
-	input := "(def not (fn (b) (if b :false :true)))"
-	if _, err := replNext(input); err != nil {
-		panic(err)
+(def loadFile
+  (fn (srcFilePath)
+    (def src (readTextFile srcFilePath))
+    (set src (str "(do " src "\n:nil)"))
+    (def expr (readExpr src))
+    (eval expr)))
+`
+
+	for _, stdlib_def := range strings.Split(src_stdlib, "\n\n") {
+		if _, err := replNext(stdlib_def); err != nil {
+			panic(err)
+		}
 	}
 
+	readln := bufio.NewScanner(os.Stdin) // want line-editing? just run with `rlwrap`
 	const prompt = "\n࿊  "
 	fmt.Print(prompt)
 	for readln.Scan() {

@@ -34,7 +34,8 @@ var (
 	specialForms = map[ExprIdent]FnSpecial{}
 )
 
-func init() {
+func init() { // in here, rather than above, to avoid "initialization cycle" error
+	envMain.Map["eval"] = ExprFunc(stdEval)
 	specialForms = map[ExprIdent]FnSpecial{
 		"def": stdDef,
 		"set": stdSet,
@@ -292,7 +293,7 @@ func stdPrint(args []Expr) (Expr, error) {
 	return exprNil, nil
 }
 func stdPrintln(args []Expr) (Expr, error) {
-	os.Stdout.WriteString(str(args, true) + "\n")
+	os.Stdout.WriteString(str(args, false) + "\n")
 	return exprNil, nil
 }
 func stdStr(args []Expr) (Expr, error) {
@@ -446,4 +447,11 @@ func stdReadTextFile(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return ExprStr(file_bytes), nil
+}
+
+func stdEval(args []Expr) (Expr, error) {
+	if err := checkArgCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	return evalAndApply(&envMain, args[0])
 }
