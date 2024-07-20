@@ -44,7 +44,9 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 }
 
 func checkArgsCount(wantAtLeast int, wantAtMost int, have []Expr) error {
-	if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
+	if wantAtLeast < 0 {
+		return nil
+	} else if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
 		return fmt.Errorf("expected %d arg(s), not %d", want_exactly, len(have))
 	} else if len(have) < wantAtLeast {
 		return fmt.Errorf("expected at least %d arg(s), not %d", wantAtLeast, len(have))
