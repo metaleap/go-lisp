@@ -250,7 +250,11 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	if len(args) > 2 {
 		body = append(ExprList{ExprIdent("do")}, args[1:]...)
 	}
-	return nil, &ExprFn{params: params, body: body, env: env}, nil
+	var expr Expr = &ExprFn{params: params, body: body, env: env}
+	if disableTco {
+		expr = expr.(*ExprFn).ToFunc()
+	}
+	return nil, expr, nil
 }
 
 func (me *ExprFn) newEnv(callerArgs []Expr) (*Env, error) {
@@ -260,16 +264,15 @@ func (me *ExprFn) newEnv(callerArgs []Expr) (*Env, error) {
 	return newEnv(me.env, me.params, callerArgs), nil
 }
 
-// // not really needed right now, but let's keep it around for the time being
-// func (me *ExprFn) ToFunc() ExprFunc {
-// 	return ExprFunc(func(_ *Env, callerArgs []Expr) (Expr, error) {
-// 		env, err := me.newEnv(callerArgs)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		return evalAndApply(env, me.body)
-// 	})
-// }
+func (me *ExprFn) ToFunc() ExprFunc {
+	return ExprFunc(func(_ *Env, callerArgs []Expr) (Expr, error) {
+		env, err := me.newEnv(callerArgs)
+		if err != nil {
+			return nil, err
+		}
+		return evalAndApply(env, me.body)
+	})
+}
 
 func str(args []Expr, printReadably bool) string {
 	var buf strings.Builder
