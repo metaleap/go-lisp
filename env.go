@@ -7,11 +7,6 @@ import (
 
 type FnSpecial = func(*Env, []Expr) (*Env, Expr, error)
 
-var (
-	specialForms = map[ExprIdent]FnSpecial{}
-	envMain      = newEnv(nil, nil, nil)
-)
-
 type Env struct {
 	Parent *Env
 	Map    map[ExprIdent]Expr

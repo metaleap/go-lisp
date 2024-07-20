@@ -13,8 +13,8 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 			env = nil
 		} else {
 			var special_form FnSpecial
-			if isIdent(it[0]) {
-				special_form = specialForms[it[0].(ExprIdent)]
+			if ident, _ := it[0].(ExprIdent); ident != "" {
+				special_form = specialForms[ident]
 			}
 			if special_form != nil {
 				if env, expr, err = special_form(env, it[1:]); err != nil {

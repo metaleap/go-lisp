@@ -5,10 +5,18 @@ import (
 	"reflect"
 )
 
-// General types
 type Expr interface {
 	isExpr()
 }
+
+type ExprIdent string
+type ExprKeyword string
+type ExprStr string
+type ExprNum int
+type ExprFunc func(*Env, []Expr) (Expr, error)
+type ExprList []Expr
+type ExprVec []Expr
+type ExprHashMap map[ExprStr]Expr
 
 func (ExprIdent) isExpr()   {}
 func (ExprKeyword) isExpr() {}
@@ -18,67 +26,6 @@ func (ExprFunc) isExpr()    {}
 func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
-
-// Scalars
-
-type ExprIdent string
-
-func isIdent(expr Expr) bool {
-	_, ok := expr.(ExprIdent)
-	return ok
-}
-
-type ExprNum int
-
-func isNum(expr Expr) bool {
-	_, ok := expr.(ExprNum)
-	return ok
-}
-
-type ExprKeyword string
-
-func isKeyword(expr Expr) bool {
-	_, ok := expr.(ExprKeyword)
-	return ok
-}
-
-type ExprStr string
-
-func isString(expr Expr) bool {
-	_, ok := expr.(ExprStr)
-	return ok
-}
-
-// Functions
-type ExprFunc func(*Env, []Expr) (Expr, error)
-
-func isFunc(expr Expr) bool {
-	_, ok := expr.(ExprFunc)
-	return ok
-}
-
-// Lists
-type ExprList []Expr
-
-func newList(exprs ...Expr) Expr {
-	return ExprList(exprs)
-}
-
-func isList(expr Expr) bool {
-	_, ok := expr.(ExprList)
-	return ok
-}
-
-// Vectors
-type ExprVec []Expr
-
-func isVec(expr Expr) bool {
-	_, ok := expr.(ExprVec)
-	return ok
-}
-
-// Hash Maps
-type ExprHashMap map[ExprStr]Expr
 
 func newHashMap(seq Expr) (Expr, error) {
 	list, err := mustSeq(seq)
@@ -99,51 +46,43 @@ func newHashMap(seq Expr) (Expr, error) {
 	return hash_map, nil
 }
 
-func isHashMap(expr Expr) bool {
-	_, ok := expr.(ExprHashMap)
-	return ok
-}
-
 // General functions
 
 func isListOrVec(seq Expr) bool {
-	if seq == nil {
-		return false
-	}
-	return (reflect.TypeOf(seq) == reflect.TypeOf(ExprList{})) ||
-		(reflect.TypeOf(seq) == reflect.TypeOf(ExprVec{}))
+	ty := reflect.TypeOf(seq)
+	return (ty == reflect.TypeFor[ExprList]()) || (ty == reflect.TypeFor[ExprVec]())
 }
 
-func isEq(a Expr, b Expr) bool {
-	ota, otb := reflect.TypeOf(a), reflect.TypeOf(b)
-	if (ota != otb) && ((!isListOrVec(a)) || !isListOrVec(b)) {
+func isEq(arg1 Expr, arg2 Expr) bool {
+	ty1, ty2 := reflect.TypeOf(arg1), reflect.TypeOf(arg2)
+	if (ty1 != ty2) && ((!isListOrVec(arg1)) || !isListOrVec(arg2)) {
 		return false
 	}
-	switch a.(type) {
+	switch arg1.(type) {
 	case ExprVec, ExprList:
-		sa, _ := mustSeq(a)
-		sb, _ := mustSeq(b)
-		if len(sa) != len(sb) {
+		sl1, _ := mustSeq(arg1)
+		sl2, _ := mustSeq(arg2)
+		if len(sl1) != len(sl2) {
 			return false
 		}
-		for i := 0; i < len(sa); i += 1 {
-			if !isEq(sa[i], sb[i]) {
+		for i := 0; i < len(sl1); i += 1 {
+			if !isEq(sl1[i], sl2[i]) {
 				return false
 			}
 		}
 		return true
 	case ExprHashMap:
-		ma, mb := a.(ExprHashMap), b.(ExprHashMap)
-		if len(ma) != len(mb) {
+		hm1, hm2 := arg1.(ExprHashMap), arg2.(ExprHashMap)
+		if len(hm1) != len(hm2) {
 			return false
 		}
-		for k, v := range ma {
-			if !isEq(v, mb[k]) {
+		for k, v := range hm1 {
+			if !isEq(v, hm2[k]) {
 				return false
 			}
 		}
 		return true
 	default:
-		return a == b
+		return arg1 == arg2
 	}
 }

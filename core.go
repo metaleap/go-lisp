@@ -8,18 +8,8 @@ import (
 	"strings"
 )
 
-func init() {
-	for k, v := range map[ExprIdent]FnSpecial{
-		"def": stdDef,
-		"set": stdSet,
-		"let": stdLet,
-		"do":  stdDo,
-		"if":  stdIf,
-		"fn":  stdFn,
-	} {
-		specialForms[k] = v
-	}
-	for k, v := range map[ExprIdent]Expr{
+var (
+	envMain = Env{Map: map[ExprIdent]Expr{
 		"print":   ExprFunc(stdPrint),
 		"println": ExprFunc(stdPrintln),
 		"str":     ExprFunc(stdStr),
@@ -38,8 +28,18 @@ func init() {
 		">":       ExprFunc(stdGt),
 		"<=":      ExprFunc(stdLe),
 		">=":      ExprFunc(stdGe),
-	} {
-		envMain.Map[k] = v
+	}}
+	specialForms = map[ExprIdent]FnSpecial{}
+)
+
+func init() {
+	specialForms = map[ExprIdent]FnSpecial{
+		"def": stdDef,
+		"set": stdSet,
+		"let": stdLet,
+		"do":  stdDo,
+		"if":  stdIf,
+		"fn":  stdFn,
 	}
 }
 
@@ -157,6 +157,9 @@ func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	if _, is_special := specialForms[name]; is_special {
+		return nil, nil, fmt.Errorf("cannot redefine `%s`", name)
+	}
 	if isDef && env.hasOwn(name) {
 		return nil, nil, errors.New("already defined: " + string(name))
 	} else if _, err := env.get(name); (!isDef) && err != nil {
@@ -204,6 +207,9 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 		if err != nil {
 			return nil, nil, err
 		}
+		if _, is_special := specialForms[name]; is_special {
+			return nil, nil, fmt.Errorf("cannot redefine `%s`", name)
+		}
 		expr, err := evalAndApply(let_env, pair[1])
 		if err != nil {
 			return nil, nil, err
@@ -225,8 +231,7 @@ func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
 	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
 		idx = 2
 	}
-	expr, err = evalAndApply(env, args[idx])
-	return nil, expr, err
+	return env, args[idx], nil
 }
 
 func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
@@ -248,13 +253,6 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 		_, expr, err := stdDo(env_closure, args[1:])
 		return expr, err
 	}), nil
-}
-
-func stdEq(_ *Env, args []Expr) (Expr, error) {
-	if err := reqArgCountExactly(2, args); err != nil {
-		return nil, err
-	}
-	return exprBool(isEq(args[0], args[1])), nil
 }
 
 func str(args []Expr, printReadably bool) string {
@@ -341,6 +339,13 @@ func stdCount(_ *Env, args []Expr) (Expr, error) {
 	return ExprNum(len(list)), nil
 }
 
+func stdEq(_ *Env, args []Expr) (Expr, error) {
+	if err := reqArgCountExactly(2, args); err != nil {
+		return nil, err
+	}
+	return exprBool(isEq(args[0], args[1])), nil
+}
+
 func compare(args []Expr) (int, error) {
 	if err := reqArgCountExactly(2, args); err != nil {
 		return 0, err
@@ -354,13 +359,8 @@ func compare(args []Expr) (int, error) {
 		if other, ok := args[1].(ExprStr); ok {
 			return cmp.Compare(it, other), nil
 		}
-	case ExprKeyword:
-		if other, ok := args[1].(ExprKeyword); ok {
-			return cmp.Compare(it, other), nil
-		}
 	}
 	return 0, fmt.Errorf("specified operands are not comparable")
-
 }
 
 func stdCmp(_ *Env, args []Expr) (Expr, error) {
