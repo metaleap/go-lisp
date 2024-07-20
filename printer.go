@@ -38,7 +38,7 @@ func exprToString(expr Expr, srcLike bool) string {
 		}
 	case ExprNum:
 		return strconv.Itoa(int(it))
-	case ExprAtom:
+	case *ExprAtom:
 		if srcLike {
 			return fmt.Sprintf("(atom %s)", exprToString(it.Ref, true))
 		}

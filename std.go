@@ -35,6 +35,9 @@ var (
 		"readTextFile": ExprFunc(stdReadTextFile),
 		"atomFrom":     ExprFunc(stdAtomFrom),
 		"atomGet":      ExprFunc(stdAtomGet),
+		"atomSet":      ExprFunc(stdAtomSet),
+		"atomSwap":     ExprFunc(stdAtomSwap),
+		"osArgs":       ExprList{}, // populated by `main` when running a user-specified source file
 	}}
 	specialForms map[ExprIdent]FnSpecial
 )
@@ -72,7 +75,7 @@ func checkArgsCountAtLeast(want int, have []Expr) error {
 	return nil
 }
 
-func checkIs[T any](have Expr) (T, error) {
+func checkIs[T Expr](have Expr) (T, error) {
 	ret, ok := have.(T)
 	if !ok {
 		return ret, fmt.Errorf("expected %T, not %T", ret, have)
@@ -80,7 +83,7 @@ func checkIs[T any](have Expr) (T, error) {
 	return ret, nil
 }
 
-func checkAre[T any](have ...Expr) error {
+func checkAre[T Expr](have ...Expr) error {
 	for _, expr := range have {
 		if _, err := checkIs[T](expr); err != nil {
 			return err
@@ -89,8 +92,12 @@ func checkAre[T any](have ...Expr) error {
 	return nil
 }
 
-func checkAreBoth[T1 any, T2 any](have ...Expr) (ret1 T1, ret2 T2, err error) {
-	if err = checkArgsCountExactly(2, have); err != nil {
+func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, ret2 T2, err error) {
+	check_args_count := checkArgsCountExactly
+	if !exactArgsCount {
+		check_args_count = checkArgsCountAtLeast
+	}
+	if err = check_args_count(2, have); err != nil {
 		return
 	}
 	if ret1, err = checkIs[T1](have[0]); err != nil {
@@ -114,7 +121,7 @@ func checkIsSeq(expr Expr) ([]Expr, error) {
 }
 
 func stdAdd(args []Expr) (Expr, error) {
-	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args...)
+	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +129,7 @@ func stdAdd(args []Expr) (Expr, error) {
 }
 
 func stdSub(args []Expr) (Expr, error) {
-	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args...)
+	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +137,7 @@ func stdSub(args []Expr) (Expr, error) {
 }
 
 func stdMul(args []Expr) (Expr, error) {
-	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args...)
+	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +145,7 @@ func stdMul(args []Expr) (Expr, error) {
 }
 
 func stdDiv(args []Expr) (Expr, error) {
-	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args...)
+	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -336,8 +343,10 @@ func stdIs(args []Expr) (Expr, error) {
 		if _, ok = args[1].(*ExprFn); !ok {
 			_, ok = args[1].(ExprFunc)
 		}
+	case ":atom":
+		_, ok = args[1].(*ExprAtom)
 	default:
-		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`", kind)
+		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`, `:atom`", kind)
 	}
 	return exprBool(ok), nil
 }
@@ -461,13 +470,38 @@ func stdAtomFrom(args []Expr) (Expr, error) {
 	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
-	return ExprAtom{Ref: args[0]}, nil
+	return &ExprAtom{Ref: args[0]}, nil
 }
 func stdAtomGet(args []Expr) (Expr, error) {
 	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
-	atom, err := checkIs[ExprAtom](args[0])
+	atom, err := checkIs[*ExprAtom](args[0])
+	if err != nil {
+		return nil, err
+	}
+	return atom.Ref, nil
+}
+func stdAtomSet(args []Expr) (Expr, error) {
+	if err := checkArgsCountExactly(2, args); err != nil {
+		return nil, err
+	}
+	atom, err := checkIs[*ExprAtom](args[0])
+	if err != nil {
+		return nil, err
+	}
+	atom.Ref = args[1]
+	return atom.Ref, nil
+}
+func stdAtomSwap(args []Expr) (Expr, error) {
+	if err := checkArgsCountAtLeast(2, args); err != nil {
+		return nil, err
+	}
+	atom, fn, err := checkAreBoth[*ExprAtom, *ExprFn](args, false)
+	if err != nil {
+		return nil, err
+	}
+	atom.Ref, err = fn.ToFunc()(append([]Expr{atom.Ref}, args[2:]...))
 	if err != nil {
 		return nil, err
 	}

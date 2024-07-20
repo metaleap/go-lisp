@@ -16,7 +16,7 @@ func (ExprNum) isExpr()     {}
 func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
-func (ExprAtom) isExpr()    {}
+func (*ExprAtom) isExpr()   {}
 func (ExprFunc) isExpr()    {}
 func (*ExprFn) isExpr()     {}
 

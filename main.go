@@ -25,10 +25,20 @@ func main() {
 		panic(err)
 	}
 
+	// check if we are to run the REPL or run a specified source file
+	if len(os.Args) > 1 { // run the specified source file and exit
+		addOsArgsToEnv()
+		if _, err := readAndEval(fmt.Sprintf("(loadFile %q)", os.Args[1])); err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	// read-eval-print loop (REPL)
 	readln := bufio.NewScanner(os.Stdin) // want line-editing? just run with `rlwrap`
 	const prompt = "\n࿊  "
 	fmt.Print(prompt)
-	for readln.Scan() { // read-eval-print loop (REPL)
+	for readln.Scan() {
 		input := strings.TrimSpace(readln.Text())
 		expr, err := readAndEval(input)
 		if err != nil {
@@ -50,4 +60,12 @@ func readAndEval(str string) (Expr, error) {
 		return nil, err
 	}
 	return evalAndApply(&envMain, expr)
+}
+
+func addOsArgsToEnv() {
+	args := make(ExprList, 0, len(os.Args)-2)
+	for _, arg := range os.Args[2:] {
+		args = append(args, ExprStr(arg))
+	}
+	envMain.set("osArgs", args)
 }

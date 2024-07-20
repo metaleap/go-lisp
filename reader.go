@@ -2,6 +2,9 @@ package main
 
 // all adopted from github.com/kanaka/mal/blob/master/impls/go/src/reader/reader.go and restyled slightly
 
+// a mild incorrectness we accept for this repo: the parser (`readForm` and its callees)
+// ignores extraneous extra tokens after a complete-expression parse, they're discarded.
+
 import (
 	"errors"
 	"regexp"
@@ -152,7 +155,7 @@ func readForm(r Reader) (Expr, error) {
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{ExprIdent("deref"), form}, nil
+		return ExprList{ExprIdent("atomGet"), form}, nil
 
 	// list
 	case ")":
