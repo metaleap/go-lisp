@@ -59,6 +59,14 @@ func isListOrVec(seq Expr) bool {
 	return (ty == reflect.TypeFor[ExprList]()) || (ty == reflect.TypeFor[ExprVec]())
 }
 
+func isListStartingWithIdent(expr Expr, ident ExprIdent) bool {
+	if list, _ := expr.(ExprList); len(list) > 0 {
+		maybe_ident, _ := list[0].(ExprIdent)
+		return (maybe_ident == ident)
+	}
+	return false
+}
+
 func isEq(arg1 Expr, arg2 Expr) bool {
 	ty1, ty2 := reflect.TypeOf(arg1), reflect.TypeOf(arg2)
 	if (ty1 != ty2) && ((!isListOrVec(arg1)) || !isListOrVec(arg2)) {

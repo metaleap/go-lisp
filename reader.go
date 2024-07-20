@@ -121,34 +121,36 @@ func readForm(r Reader) (Expr, error) {
 		return nil, errors.New("readForm underflow")
 	}
 	switch *token {
+
+	// short-hands
 	case `'`:
 		r.next()
 		form, err := readForm(r)
 		if err != nil {
 			return nil, err
 		}
-		return ExprList{ExprIdent("quote"), form}, nil
+		return ExprList{exprQuote, form}, nil
 	case "`":
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{ExprIdent("quasiquote"), form}, nil
+		return ExprList{exprQuasiQuote, form}, nil
 	case `~`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{ExprIdent("unquote"), form}, nil
+		return ExprList{exprUnquote, form}, nil
 	case `~@`:
 		r.next()
 		form, e := readForm(r)
 		if e != nil {
 			return nil, e
 		}
-		return ExprList{ExprIdent("splice-unquote"), form}, nil
+		return ExprList{exprSpliceUnquote, form}, nil
 	case `@`:
 		r.next()
 		form, e := readForm(r)

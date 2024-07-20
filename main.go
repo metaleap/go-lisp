@@ -21,7 +21,7 @@ func main() {
     (eval expr)))
 `
 
-	if _, err := readAndEval("(do " + src_stdlib + "\n:nil)"); err != nil {
+	if _, err := readAndEval("(" + string(exprDo) + " " + src_stdlib + "\n" + string(exprNil) + ")"); err != nil {
 		panic(err)
 	}
 
