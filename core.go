@@ -178,6 +178,19 @@ func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 	if err = reqArgCountAtLeast(1, args); err != nil {
 		return
 	}
+	for _, arg := range args[:len(args)-1] {
+		if expr, err = evalAndApply(env, arg); err != nil {
+			return
+		}
+	}
+	tailEnv, expr = env, args[len(args)-1]
+	return
+}
+
+func tmpDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
+	if err = reqArgCountAtLeast(1, args); err != nil {
+		return
+	}
 	for _, arg := range args {
 		if expr, err = evalAndApply(env, arg); err != nil {
 			return
@@ -250,7 +263,7 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 			return nil, err
 		}
 		env_closure := newEnv(env, params, callerArgs)
-		_, expr, err := stdDo(env_closure, args[1:])
+		_, expr, err := tmpDo(env_closure, args[1:])
 		return expr, err
 	}), nil
 }
