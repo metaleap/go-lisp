@@ -530,7 +530,7 @@ func stdCons(args []Expr) (Expr, error) {
 	if err := checkArgsCountExactly(2, args); err != nil {
 		return nil, err
 	}
-	list, err := checkIs[ExprList](args[1])
+	list, err := checkIsSeq(args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +550,7 @@ func stdConcat(args []Expr) (Expr, error) {
 }
 
 func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
-	is_list_starting_with_ident := func(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ ExprList, _ bool, err error) {
+	is_list_starting_with_ident := func(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
 		if list, _ := maybeList.(ExprList); len(list) > 0 {
 			if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
 				if err := checkArgsCountExactly(mustHaveLen, list); err == nil {
