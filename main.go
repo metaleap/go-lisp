@@ -67,6 +67,11 @@ const srcMiniStdlib = `
   (macro (b1 b2)
     ´(if ~b1 :true ~b2)))
 
+(def cond
+    (macro (& xs)
+        (if (> (count xs) 0)
+            (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw "odd number of forms to cond")) (cons 'cond (rest (rest xs)))))))
+
 (def loadFile
   (fn (srcFilePath)
     (def src (readTextFile srcFilePath))
@@ -77,6 +82,6 @@ const srcMiniStdlib = `
 (def postfix ;;; turns (1 2 +) into (+ 1 2)
   (macro (call)
     (if (and (is :list call) (> (count call) 1))
-      (cons (listAt call -1) (listAt call 0 -2))
+      (cons (at call -1) (at call 0 -2))
       call)))
 `

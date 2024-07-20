@@ -12,10 +12,11 @@ var (
 		"println":      ExprFunc(stdPrintln),
 		"str":          ExprFunc(stdStr),
 		"show":         ExprFunc(stdShow),
-		"list":         ExprFunc(stdList),
 		"is":           ExprFunc(stdIs),
-		"isEmpty":      ExprFunc(stdIsEmpty),
+		"list":         ExprFunc(stdList),
+		"vec":          ExprFunc(stdVec),
 		"count":        ExprFunc(stdCount),
+		"isEmpty":      ExprFunc(stdIsEmpty),
 		"cmp":          ExprFunc(stdCmp),
 		"+":            ExprFunc(stdAdd),
 		"-":            ExprFunc(stdSub),
@@ -34,8 +35,7 @@ var (
 		"atomSwap":     ExprFunc(stdAtomSwap),
 		"cons":         ExprFunc(stdCons),
 		"concat":       ExprFunc(stdConcat),
-		"vec":          ExprFunc(stdVec),
-		"listAt":       ExprFunc(stdListAt),
+		"at":           ExprFunc(stdListAt),
 	}}
 )
 
@@ -200,7 +200,7 @@ func stdCount(args []Expr) (Expr, error) {
 	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
-	list, err := checkIs[ExprList](args[0])
+	list, err := checkIsSeq(args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func stdListAt(args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	list, err := checkIs[ExprList](args[0])
+	list, err := checkIsSeq(args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -397,5 +397,5 @@ func stdListAt(args []Expr) (Expr, error) {
 		return nil, fmt.Errorf("incorrect end index %d with list of length %d and start index %d", idx_end, len(list), idx_start)
 	}
 
-	return list[idx_start:idx_end], nil
+	return ExprList(list[idx_start:idx_end]), nil
 }

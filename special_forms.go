@@ -167,7 +167,7 @@ func stdMacroExpand(env *Env, args []Expr) (*Env, Expr, error) {
 		return nil, nil, err
 	}
 
-	expr, err := macroExpand(env, list, nil)
+	expr, err := macroExpand(env, list)
 	if err != nil {
 		return nil, nil, err
 	}
