@@ -1,5 +1,7 @@
 package main
 
+// all adopted from github.com/kanaka/mal/blob/master/impls/go/src/reader/reader.go and restyled slightly
+
 import (
 	"errors"
 	"regexp"
@@ -45,10 +47,10 @@ func tokenize(src string) []string {
 	return results
 }
 
-func readAtom(r Reader) (Expr, error) {
+func readAtomicExpr(r Reader) (Expr, error) {
 	token := r.next()
 	if token == nil {
-		return nil, errors.New("readAtom underflow")
+		return nil, errors.New("readAtomicExpr underflow")
 	}
 	tok := *token
 	if match, _ := regexp.MatchString(`^-?[0-9]+$`, tok); match {
@@ -170,7 +172,7 @@ func readForm(r Reader) (Expr, error) {
 	case "{":
 		return readHashMap(r)
 	default:
-		return readAtom(r)
+		return readAtomicExpr(r)
 	}
 }
 

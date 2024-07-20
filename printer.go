@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func exprToString(obj Expr, printReadably bool) string {
+func exprToString(expr Expr, srcLike bool) string {
 	print_list := func(lst []Expr, pr bool, opening string, closing string, sep string) string {
 		ret := make([]string, 0, len(lst))
 		for _, e := range lst {
@@ -15,34 +15,35 @@ func exprToString(obj Expr, printReadably bool) string {
 		return opening + strings.Join(ret, sep) + closing
 	}
 
-	switch tobj := obj.(type) {
+	switch it := expr.(type) {
 	case ExprList:
-		return print_list(tobj, printReadably, "(", ")", " ")
+		return print_list(it, srcLike, "(", ")", " ")
 	case ExprVec:
-		return print_list(tobj, printReadably, "[", "]", " ")
+		return print_list(it, srcLike, "[", "]", " ")
 	case ExprHashMap:
-		str_list := make([]string, 0, len(tobj)*2)
-		for k, v := range tobj {
-			str_list = append(str_list, exprToString(k, printReadably), exprToString(v, printReadably))
+		str_list := make([]string, 0, len(it)*2)
+		for k, v := range it {
+			str_list = append(str_list, exprToString(k, srcLike), exprToString(v, srcLike))
 		}
 		return "{" + strings.Join(str_list, " ") + "}"
-	case ExprKeyword:
-		return string(tobj)
-	case ExprStr:
-		if printReadably {
-			return strconv.Quote(string(tobj))
-		} else {
-			return string(tobj)
-		}
 	case ExprIdent:
-		return string(tobj)
-	case ExprFunc:
-		return fmt.Sprintf("<function %#v>", tobj)
-	case *ExprFn:
-		return fmt.Sprintf("<function %#v>", tobj)
+		return string(it)
+	case ExprKeyword:
+		return string(it)
+	case ExprStr:
+		if srcLike {
+			return strconv.Quote(string(it))
+		} else {
+			return string(it)
+		}
 	case ExprNum:
-		return strconv.Itoa(int(tobj))
+		return strconv.Itoa(int(it))
+	case ExprAtom:
+		if srcLike {
+			return fmt.Sprintf("(atom %s)", exprToString(it.Ref, true))
+		}
+		return exprToString(it.Ref, false)
 	default:
-		return fmt.Sprintf("UNKNOWN %T %#v", tobj, tobj)
+		return fmt.Sprintf("%#v", it)
 	}
 }

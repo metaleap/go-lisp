@@ -16,6 +16,7 @@ func (ExprNum) isExpr()     {}
 func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
+func (ExprAtom) isExpr()    {}
 func (ExprFunc) isExpr()    {}
 func (*ExprFn) isExpr()     {}
 
@@ -26,6 +27,7 @@ type ExprNum int
 type ExprList []Expr
 type ExprVec []Expr
 type ExprHashMap map[ExprStr]Expr
+type ExprAtom struct{ Ref Expr }
 type ExprFunc func([]Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
 	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`

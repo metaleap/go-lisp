@@ -33,6 +33,8 @@ var (
 		">=":           ExprFunc(stdGe),
 		"readExpr":     ExprFunc(stdReadExpr),
 		"readTextFile": ExprFunc(stdReadTextFile),
+		"atomFrom":     ExprFunc(stdAtomFrom),
+		"atomGet":      ExprFunc(stdAtomGet),
 	}}
 	specialForms map[ExprIdent]FnSpecial
 )
@@ -453,4 +455,21 @@ func stdEval(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return evalAndApply(&envMain, args[0])
+}
+
+func stdAtomFrom(args []Expr) (Expr, error) {
+	if err := checkArgsCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	return ExprAtom{Ref: args[0]}, nil
+}
+func stdAtomGet(args []Expr) (Expr, error) {
+	if err := checkArgsCountExactly(1, args); err != nil {
+		return nil, err
+	}
+	atom, err := checkIs[ExprAtom](args[0])
+	if err != nil {
+		return nil, err
+	}
+	return atom.Ref, nil
 }
