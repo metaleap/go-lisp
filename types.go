@@ -9,23 +9,29 @@ type Expr interface {
 	isExpr()
 }
 
-type ExprIdent string
-type ExprKeyword string
-type ExprStr string
-type ExprNum int
-type ExprFunc func(*Env, []Expr) (Expr, error)
-type ExprList []Expr
-type ExprVec []Expr
-type ExprHashMap map[ExprStr]Expr
-
 func (ExprIdent) isExpr()   {}
 func (ExprKeyword) isExpr() {}
 func (ExprStr) isExpr()     {}
 func (ExprNum) isExpr()     {}
-func (ExprFunc) isExpr()    {}
 func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
+func (ExprFunc) isExpr()    {}
+func (ExprFn) isExpr()      {}
+
+type ExprIdent string
+type ExprKeyword string
+type ExprStr string
+type ExprNum int
+type ExprList []Expr
+type ExprVec []Expr
+type ExprHashMap map[ExprStr]Expr
+type ExprFunc func(*Env, []Expr) (Expr, error)
+type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice. `ExprFn` is a wrapper with `ExprFn.Call` being its `ExprFunc`.
+	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
+	body   []Expr
+	env    *Env
+}
 
 func newHashMap(seq Expr) (Expr, error) {
 	list, err := mustSeq(seq)

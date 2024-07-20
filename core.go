@@ -258,14 +258,20 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := reqTypes[ExprIdent](params...); err != nil {
 		return nil, nil, err
 	}
-	return nil, ExprFunc(func(_callerEnv *Env, callerArgs []Expr) (Expr, error) {
-		if err := reqArgCountExactly(len(params), callerArgs); err != nil {
-			return nil, err
-		}
-		env_closure := newEnv(env, params, callerArgs)
-		_, expr, err := tmpDo(env_closure, args[1:])
-		return expr, err
-	}), nil
+	return nil, ExprFn{
+		params: params,
+		body:   args[1:],
+		env:    env,
+	}, nil
+}
+
+func (me *ExprFn) Call(_ *Env, callerArgs []Expr) (Expr, error) {
+	if err := reqArgCountExactly(len(me.params), callerArgs); err != nil {
+		return nil, err
+	}
+	env_closure := newEnv(me.env, me.params, callerArgs)
+	_, expr, err := tmpDo(env_closure, me.body)
+	return expr, err
 }
 
 func str(args []Expr, printReadably bool) string {

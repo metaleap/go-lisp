@@ -26,12 +26,17 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					return nil, err
 				}
 				list := expr.(ExprList)
-				var fn ExprFunc
-				if fn, err = reqType[ExprFunc](list[0]); err != nil {
+				args := list[1:]
+				switch fn := list[0].(type) {
+				default:
 					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", list[0]))
+				case ExprFunc:
+					expr, err = fn(env, args)
+					env = nil
+				case ExprFn:
+					expr, err = fn.Call(env, args)
+					env = nil
 				}
-				expr, err = fn(env, list[1:])
-				env = nil
 			}
 		}
 	}
