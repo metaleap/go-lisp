@@ -6,36 +6,36 @@ import (
 )
 
 func evalAndApply(env *Env, expr Expr) (Expr, error) {
-	if it, is := expr.(ExprList); is && len(it) > 0 {
-		var special_form Expr
-		if isIdent(it[0]) {
-			special_form = envSpecials.Map[it[0].(ExprIdent)]
-		}
-
-		var err error
-		var list ExprList
-		if special_form != nil {
-			list = make(ExprList, len(it))
-			copy(list, it)
-			list[0], err = evalExpr(env, list[0])
-			if err != nil {
-				return nil, err
-			}
+	var err error
+	for env != nil {
+		if it, is := expr.(ExprList); (!is) || len(it) == 0 {
+			expr, err = evalExpr(env, expr)
+			env = nil
 		} else {
-			expr, err = evalExpr(env, it)
-			if err != nil {
-				return nil, err
+			var special_form FnSpecial
+			if isIdent(it[0]) {
+				special_form = specialForms[it[0].(ExprIdent)]
 			}
-			list = expr.(ExprList)
+			if special_form != nil {
+				if env, expr, err = special_form(env, it[1:]); err != nil {
+					return nil, err
+				}
+			} else {
+				expr, err = evalExpr(env, it)
+				if err != nil {
+					return nil, err
+				}
+				list := expr.(ExprList)
+				var fn ExprFunc
+				if fn, err = reqType[ExprFunc](list[0]); err != nil {
+					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", list[0]))
+				}
+				expr, err = fn(env, list[1:])
+				env = nil
+			}
 		}
-
-		fn, err := reqType[ExprFunc](list[0])
-		if err != nil {
-			return nil, errors.New("uncallable: " + fmt.Sprintf("%#v", list[0]))
-		}
-		return fn(env, list[1:])
 	}
-	return evalExpr(env, expr)
+	return expr, err
 }
 
 func evalExpr(env *Env, expr Expr) (Expr, error) {

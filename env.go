@@ -5,9 +5,11 @@ import (
 	"fmt"
 )
 
+type FnSpecial = func(*Env, []Expr) (*Env, Expr, error)
+
 var (
-	envSpecials = newEnv(nil, nil, nil)
-	envMain     = newEnv(envSpecials, nil, nil)
+	specialForms = map[ExprIdent]FnSpecial{}
+	envMain      = newEnv(nil, nil, nil)
 )
 
 type Env struct {

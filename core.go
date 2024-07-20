@@ -9,15 +9,15 @@ import (
 )
 
 func init() {
-	for k, v := range map[ExprIdent]Expr{
-		"def": ExprFunc(stdDef),
-		"set": ExprFunc(stdSet),
-		"let": ExprFunc(stdLet),
-		"do":  ExprFunc(stdDo),
-		"if":  ExprFunc(stdIf),
-		"fn":  ExprFunc(stdFn),
+	for k, v := range map[ExprIdent]FnSpecial{
+		"def": stdDef,
+		"set": stdSet,
+		"let": stdLet,
+		"do":  stdDo,
+		"if":  stdIf,
+		"fn":  stdFn,
 	} {
-		envSpecials.Map[k] = v
+		specialForms[k] = v
 	}
 	for k, v := range map[ExprIdent]Expr{
 		"print":   ExprFunc(stdPrint),
@@ -143,35 +143,35 @@ func stdDiv(_ *Env, args []Expr) (Expr, error) {
 	return op1 / op2, nil
 }
 
-func stdDef(env *Env, args []Expr) (Expr, error) {
+func stdDef(env *Env, args []Expr) (*Env, Expr, error) {
 	return defOrSet(true, env, args)
 }
-func stdSet(env *Env, args []Expr) (Expr, error) {
+func stdSet(env *Env, args []Expr) (*Env, Expr, error) {
 	return defOrSet(false, env, args)
 }
-func defOrSet(isDef bool, env *Env, args []Expr) (Expr, error) {
+func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 	if err := reqArgCountExactly(2, args); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	name, err := reqType[ExprIdent](args[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if isDef && env.hasOwn(name) {
-		return nil, errors.New("already defined: " + string(name))
+		return nil, nil, errors.New("already defined: " + string(name))
 	} else if _, err := env.get(name); (!isDef) && err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	expr, err := evalAndApply(env, args[1])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	env.set(name, expr)
-	return expr, nil
+	return nil, expr, nil
 }
 
-func stdDo(env *Env, args []Expr) (expr Expr, err error) {
+func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 	if err = reqArgCountAtLeast(1, args); err != nil {
 		return
 	}
@@ -183,34 +183,71 @@ func stdDo(env *Env, args []Expr) (expr Expr, err error) {
 	return
 }
 
-func stdLet(env *Env, args []Expr) (Expr, error) {
+func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := reqArgCountAtLeast(2, args); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	bindings, err := mustSeq(args[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	let_env := newEnv(env, nil, nil)
 	for _, binding := range bindings {
 		pair, err := mustSeq(binding)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if err = reqArgCountExactly(2, pair); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		name, err := reqType[ExprIdent](pair[0])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		expr, err := evalAndApply(let_env, pair[1])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		let_env.set(name, expr)
 	}
 	return stdDo(let_env, args[1:])
+}
+
+func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
+	if err := reqArgCountExactly(3, args); err != nil {
+		return nil, nil, err
+	}
+	expr, err := evalAndApply(env, args[0])
+	if err != nil {
+		return nil, nil, err
+	}
+	idx := 1
+	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
+		idx = 2
+	}
+	expr, err = evalAndApply(env, args[idx])
+	return nil, expr, err
+}
+
+func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
+	if err := reqArgCountAtLeast(2, args); err != nil {
+		return nil, nil, err
+	}
+	params, err := mustSeq(args[0])
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := reqTypes[ExprIdent](params...); err != nil {
+		return nil, nil, err
+	}
+	return nil, ExprFunc(func(_callerEnv *Env, callerArgs []Expr) (Expr, error) {
+		if err := reqArgCountExactly(len(params), callerArgs); err != nil {
+			return nil, err
+		}
+		env_closure := newEnv(env, params, callerArgs)
+		_, expr, err := stdDo(env_closure, args[1:])
+		return expr, err
+	}), nil
 }
 
 func stdEq(_ *Env, args []Expr) (Expr, error) {
@@ -218,41 +255,6 @@ func stdEq(_ *Env, args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return exprBool(isEq(args[0], args[1])), nil
-}
-
-func stdIf(env *Env, args []Expr) (Expr, error) {
-	if err := reqArgCountExactly(3, args); err != nil {
-		return nil, err
-	}
-	expr, err := evalAndApply(env, args[0])
-	if err != nil {
-		return nil, err
-	}
-	idx := 1
-	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
-		idx = 2
-	}
-	return evalAndApply(env, args[idx])
-}
-
-func stdFn(env *Env, args []Expr) (Expr, error) {
-	if err := reqArgCountAtLeast(2, args); err != nil {
-		return nil, err
-	}
-	params, err := mustSeq(args[0])
-	if err != nil {
-		return nil, err
-	}
-	if err := reqTypes[ExprIdent](params...); err != nil {
-		return nil, err
-	}
-	return ExprFunc(func(_callerEnv *Env, callerArgs []Expr) (Expr, error) {
-		if err := reqArgCountExactly(len(params), callerArgs); err != nil {
-			return nil, err
-		}
-		env_closure := newEnv(env, params, callerArgs)
-		return stdDo(env_closure, args[1:])
-	}), nil
 }
 
 func str(args []Expr, printReadably bool) string {
