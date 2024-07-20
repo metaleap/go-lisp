@@ -8,33 +8,8 @@ import (
 )
 
 func main() {
-	const src_stdlib = `
-(def not
-  (fn (b)
-    (if b :false :true)))
-(def and
-  (macro (b1 b2)
-    ´(if ~b1 ~b2 :false)))
-(def or
-  (macro (b1 b2)
-    ´(if ~b1 :true ~b2)))
-
-(def loadFile
-  (fn (srcFilePath)
-    (def src (readTextFile srcFilePath))
-    (set src (str "(do " src "\n:nil)"))
-    (def expr (readExpr src))
-    (eval expr)))
-
-(def postfix
-  (macro (call)
-    (if (and (is :list call) (not (isEmpty call)))
-	  ´TODO
-	  ~call)))
-`
-
-	// load in the above mini-stdlib
-	if _, err := readAndEval("(" + string(exprIdentDo) + " " + src_stdlib + "\n" + string(exprNil) + ")"); err != nil {
+	// load in the mini-stdlib
+	if _, err := readAndEval("(" + string(exprIdentDo) + " " + srcMiniStdlib + "\n" + string(exprNil) + ")"); err != nil {
 		panic(err)
 	}
 
@@ -80,3 +55,28 @@ func addOsArgsToEnv() {
 	}
 	envMain.set("osArgs", args)
 }
+
+const srcMiniStdlib = `
+(def not
+  (fn (b)
+    (if b :false :true)))
+(def and
+  (macro (b1 b2)
+    ´(if ~b1 ~b2 :false)))
+(def or
+  (macro (b1 b2)
+    ´(if ~b1 :true ~b2)))
+
+(def loadFile
+  (fn (srcFilePath)
+    (def src (readTextFile srcFilePath))
+    (set src (str "(do " src "\n:nil)"))
+    (def expr (readExpr src))
+    (eval expr)))
+
+(def postfix ;;; turns (1 2 +) into (+ 1 2)
+  (macro (call)
+    (if (and (is :list call) (> (count call) 1))
+      (cons (listAt call -1) (listAt call 0 -2))
+      call)))
+`

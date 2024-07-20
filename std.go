@@ -43,25 +43,15 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 	envMain.Map["eval"] = ExprFunc(stdEval)
 }
 
-func checkArgsCountExactly(want int, have []Expr) error {
-	if (want >= 0) && (len(have) != want) {
-		return fmt.Errorf("expected %d arg(s), not %d", want, len(have))
-	}
-	return nil
-}
-
-func checkArgsCountAtLeast(want int, have []Expr) error {
-	if len(have) < want {
-		return fmt.Errorf("expected at least %d arg(s), not %d", want, len(have))
-	}
-	return nil
-}
-
-func checkArgsCountInRange(wantAtLeast int, wantAtMost int, have []Expr) error {
-	if len(have) > wantAtMost {
+func checkArgsCount(wantAtLeast int, wantAtMost int, have []Expr) error {
+	if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
+		return fmt.Errorf("expected %d arg(s), not %d", want_exactly, len(have))
+	} else if len(have) < wantAtLeast {
+		return fmt.Errorf("expected at least %d arg(s), not %d", wantAtLeast, len(have))
+	} else if (wantAtMost > wantAtLeast) && (len(have) > wantAtMost) {
 		return fmt.Errorf("expected %d to %d arg(s), not %d", wantAtLeast, wantAtMost, len(have))
 	}
-	return checkArgsCountAtLeast(wantAtLeast, have)
+	return nil
 }
 
 func checkIs[T Expr](have Expr) (T, error) {
@@ -82,11 +72,11 @@ func checkAre[T Expr](have ...Expr) error {
 }
 
 func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, ret2 T2, err error) {
-	check_args_count := checkArgsCountExactly
-	if !exactArgsCount {
-		check_args_count = checkArgsCountAtLeast
+	max_args_count := -1
+	if exactArgsCount {
+		max_args_count = 2
 	}
-	if err = check_args_count(2, have); err != nil {
+	if err = checkArgsCount(2, max_args_count, have); err != nil {
 		return
 	}
 	if ret1, err = checkIs[T1](have[0]); err != nil {
@@ -161,7 +151,7 @@ func stdList(args []Expr) (Expr, error) {
 }
 
 func stdIs(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return nil, err
 	}
 	kind, err := checkIs[ExprKeyword](args[0])
@@ -205,7 +195,7 @@ func stdIsEmpty(args []Expr) (Expr, error) {
 }
 
 func stdCount(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	list, err := checkIs[ExprList](args[0])
@@ -216,7 +206,7 @@ func stdCount(args []Expr) (Expr, error) {
 }
 
 func stdEq(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return nil, err
 	}
 	return exprBool(isEq(args[0], args[1])), nil
@@ -259,7 +249,7 @@ func stdGe(args []Expr) (Expr, error) {
 }
 
 func stdReadExpr(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	src, err := checkIs[ExprStr](args[0])
@@ -270,7 +260,7 @@ func stdReadExpr(args []Expr) (Expr, error) {
 }
 
 func stdReadTextFile(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	file_path, err := checkIs[ExprStr](args[0])
@@ -285,20 +275,20 @@ func stdReadTextFile(args []Expr) (Expr, error) {
 }
 
 func stdEval(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	return evalAndApply(&envMain, args[0])
 }
 
 func stdAtomFrom(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	return &ExprAtom{Ref: args[0]}, nil
 }
 func stdAtomGet(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	atom, err := checkIs[*ExprAtom](args[0])
@@ -308,7 +298,7 @@ func stdAtomGet(args []Expr) (Expr, error) {
 	return atom.Ref, nil
 }
 func stdAtomSet(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return nil, err
 	}
 	atom, err := checkIs[*ExprAtom](args[0])
@@ -319,7 +309,7 @@ func stdAtomSet(args []Expr) (Expr, error) {
 	return atom.Ref, nil
 }
 func stdAtomSwap(args []Expr) (Expr, error) {
-	if err := checkArgsCountAtLeast(2, args); err != nil {
+	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, err
 	}
 	atom, fn, err := checkAreBoth[*ExprAtom, *ExprFn](args, false)
@@ -334,7 +324,7 @@ func stdAtomSwap(args []Expr) (Expr, error) {
 }
 
 func stdCons(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return nil, err
 	}
 	list, err := checkIsSeq(args[1])
@@ -357,7 +347,7 @@ func stdConcat(args []Expr) (Expr, error) {
 }
 
 func stdVec(args []Expr) (Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
 	if vec, is_vec := args[0].(ExprVec); is_vec {
@@ -371,7 +361,7 @@ func stdVec(args []Expr) (Expr, error) {
 }
 
 func stdListAt(args []Expr) (Expr, error) {
-	err := checkArgsCountInRange(2, 3, args)
+	err := checkArgsCount(2, 3, args)
 	if err != nil {
 		return nil, err
 	}
@@ -388,10 +378,11 @@ func stdListAt(args []Expr) (Expr, error) {
 	if (int(idx_start) >= len(list)) || (idx_start < 0) {
 		return nil, fmt.Errorf("index %d out of range with list of length %d", idx_start, len(list))
 	}
-	is_range := (len(args) == 3)
-	if !is_range {
+
+	if is_range := (len(args) == 3); !is_range {
 		return list[idx_start], nil
 	}
+
 	idx_end, err := checkIs[ExprNum](args[2])
 	if err != nil {
 		return nil, err
@@ -401,7 +392,7 @@ func stdListAt(args []Expr) (Expr, error) {
 		idx_end = ExprNum(len(list))
 	}
 	if (int(idx_end) > len(list)) || (idx_end < idx_start) {
-		return nil, fmt.Errorf("end index %d faulty with list of length %d and start index %d", idx_end, len(list), idx_start)
+		return nil, fmt.Errorf("incorrect end index %d with list of length %d and start index %d", idx_end, len(list), idx_start)
 	}
 
 	return list[idx_start:idx_end], nil

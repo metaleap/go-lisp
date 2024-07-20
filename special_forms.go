@@ -36,7 +36,7 @@ func stdSet(env *Env, args []Expr) (*Env, Expr, error) {
 	return defOrSet(false, env, args)
 }
 func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return nil, nil, err
 	}
 	name, err := checkIs[ExprIdent](args[0])
@@ -76,7 +76,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
-	if err = checkArgsCountAtLeast(1, args); err != nil {
+	if err = checkArgsCount(1, -1, args); err != nil {
 		return
 	}
 	for _, arg := range args[:len(args)-1] {
@@ -89,7 +89,7 @@ func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 }
 
 func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountAtLeast(2, args); err != nil {
+	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, nil, err
 	}
 	bindings, err := checkIsSeq(args[0])
@@ -102,7 +102,7 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err = checkArgsCountExactly(2, pair); err != nil {
+		if err = checkArgsCount(2, 2, pair); err != nil {
 			return nil, nil, err
 		}
 		name, err := checkIs[ExprIdent](pair[0])
@@ -122,7 +122,7 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountExactly(3, args); err != nil {
+	if err := checkArgsCount(3, 3, args); err != nil {
 		return nil, nil, err
 	}
 	expr, err := evalAndApply(env, args[0])
@@ -137,7 +137,7 @@ func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountAtLeast(2, args); err != nil {
+	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, nil, err
 	}
 	params, err := checkIsSeq(args[0])
@@ -159,7 +159,7 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdMacroExpand(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, nil, err
 	}
 	list, err := checkIs[ExprList](args[0])
@@ -175,14 +175,14 @@ func stdMacroExpand(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdQuote(_ *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, nil, err
 	}
 	return nil, args[0], nil
 }
 
 func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCountExactly(1, args); err != nil {
+	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, nil, err
 	}
 	_, is_vec := args[0].(ExprVec)

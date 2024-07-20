@@ -46,7 +46,7 @@ type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would s
 }
 
 func (me *ExprFn) envWith(args []Expr) (*Env, error) {
-	if err := checkArgsCountExactly(len(me.params), args); err != nil {
+	if err := checkArgsCount(len(me.params), len(me.params), args); err != nil {
 		return nil, err
 	}
 	return newEnv(me.env, me.params, args), nil
@@ -69,7 +69,7 @@ func exprBool(b bool) ExprKeyword {
 }
 
 func compare(args []Expr) (int, error) {
-	if err := checkArgsCountExactly(2, args); err != nil {
+	if err := checkArgsCount(2, 2, args); err != nil {
 		return 0, err
 	}
 	switch it := args[0].(type) {
@@ -93,7 +93,7 @@ func isListOrVec(seq Expr) bool {
 func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
 	if list, _ := maybeList.(ExprList); len(list) > 0 {
 		if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
-			if err := checkArgsCountExactly(mustHaveLen, list); err == nil {
+			if err := checkArgsCount(mustHaveLen, mustHaveLen, list); err == nil {
 				return list, true, nil
 			}
 		}
