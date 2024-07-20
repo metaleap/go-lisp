@@ -52,8 +52,6 @@ func newHashMap(seq Expr) (Expr, error) {
 	return hash_map, nil
 }
 
-// General functions
-
 func isListOrVec(seq Expr) bool {
 	ty := reflect.TypeOf(seq)
 	return (ty == reflect.TypeFor[ExprList]()) || (ty == reflect.TypeFor[ExprVec]())

@@ -5,10 +5,11 @@ import (
 	"fmt"
 )
 
-const disableTco = false
+const disableTcoFuncs = false
 
-// to confirm TCO still works, uncomment the 2 commented lines in here below.
+// to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below
 // another way, run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
+
 func evalAndApply(env *Env, expr Expr) (Expr, error) {
 	// id := time.Now().UnixNano()
 	var err error
@@ -41,7 +42,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					env = nil
 				case *ExprFn:
 					expr = fn.body
-					env, err = fn.newEnv(args)
+					env, err = fn.envWith(args)
 					if err != nil {
 						return nil, err
 					}

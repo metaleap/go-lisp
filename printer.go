@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-func printExpr(obj Expr, printReadably bool) string {
+func exprToString(obj Expr, printReadably bool) string {
 	print_list := func(lst []Expr, pr bool, opening string, closing string, sep string) string {
 		ret := make([]string, 0, len(lst))
 		for _, e := range lst {
-			ret = append(ret, printExpr(e, pr))
+			ret = append(ret, exprToString(e, pr))
 		}
 		return opening + strings.Join(ret, sep) + closing
 	}
@@ -23,7 +23,7 @@ func printExpr(obj Expr, printReadably bool) string {
 	case ExprHashMap:
 		str_list := make([]string, 0, len(tobj)*2)
 		for k, v := range tobj {
-			str_list = append(str_list, printExpr(k, printReadably), printExpr(v, printReadably))
+			str_list = append(str_list, exprToString(k, printReadably), exprToString(v, printReadably))
 		}
 		return "{" + strings.Join(str_list, " ") + "}"
 	case ExprKeyword:

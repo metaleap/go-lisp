@@ -2,13 +2,16 @@ package main
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 )
 
 var (
+	exprTrue  = ExprKeyword(":true")
+	exprFalse = ExprKeyword(":false")
+	exprNil   = ExprKeyword(":nil")
+
 	envMain = Env{Map: map[ExprIdent]Expr{
 		"print":        ExprFunc(stdPrint),
 		"println":      ExprFunc(stdPrintln),
@@ -31,11 +34,10 @@ var (
 		"readExpr":     ExprFunc(stdReadExpr),
 		"readTextFile": ExprFunc(stdReadTextFile),
 	}}
-	specialForms = map[ExprIdent]FnSpecial{}
+	specialForms map[ExprIdent]FnSpecial
 )
 
-func init() { // in here, rather than above, to avoid "initialization cycle" error
-	envMain.Map["eval"] = ExprFunc(stdEval)
+func init() { // in here, rather than above, to avoid "initialization cycle" error:
 	specialForms = map[ExprIdent]FnSpecial{
 		"def": stdDef,
 		"set": stdSet,
@@ -44,13 +46,8 @@ func init() { // in here, rather than above, to avoid "initialization cycle" err
 		"if":  stdIf,
 		"fn":  stdFn,
 	}
+	envMain.Map["eval"] = ExprFunc(stdEval)
 }
-
-var (
-	exprTrue  = ExprKeyword(":true")
-	exprFalse = ExprKeyword(":false")
-	exprNil   = ExprKeyword(":nil")
-)
 
 func exprBool(b bool) ExprKeyword {
 	if b {
@@ -59,14 +56,14 @@ func exprBool(b bool) ExprKeyword {
 	return exprFalse
 }
 
-func checkArgCountExactly(want int, have []Expr) error {
+func checkArgsCountExactly(want int, have []Expr) error {
 	if len(have) != want {
 		return fmt.Errorf("expected %d arg(s), not %d", want, len(have))
 	}
 	return nil
 }
 
-func checkArgCountAtLeast(want int, have []Expr) error {
+func checkArgsCountAtLeast(want int, have []Expr) error {
 	if len(have) < want {
 		return fmt.Errorf("expected at least %d arg(s), not %d", want, len(have))
 	}
@@ -91,7 +88,7 @@ func checkAre[T any](have ...Expr) error {
 }
 
 func checkAreBoth[T1 any, T2 any](have ...Expr) (ret1 T1, ret2 T2, err error) {
-	if err = checkArgCountExactly(2, have); err != nil {
+	if err = checkArgsCountExactly(2, have); err != nil {
 		return
 	}
 	if ret1, err = checkIs[T1](have[0]); err != nil {
@@ -153,20 +150,22 @@ func stdSet(env *Env, args []Expr) (*Env, Expr, error) {
 	return defOrSet(false, env, args)
 }
 func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgCountExactly(2, args); err != nil {
+	if err := checkArgsCountExactly(2, args); err != nil {
 		return nil, nil, err
 	}
 	name, err := checkIs[ExprIdent](args[0])
 	if err != nil {
 		return nil, nil, err
 	}
-	if _, is_special := specialForms[name]; is_special {
+	if _, is_reserved := specialForms[name]; is_reserved {
 		return nil, nil, fmt.Errorf("cannot redefine `%s`", name)
 	}
-	if isDef && env.hasOwn(name) {
-		return nil, nil, errors.New("already defined: " + string(name))
-	} else if _, err := env.get(name); (!isDef) && err != nil {
-		return nil, nil, err
+	if !isDef { // check if this `set` refers to something that's been `def`d
+		if _, err := env.get(name); err != nil {
+			return nil, nil, err
+		}
+	} else if env.hasOwn(name) { // cannot re`def` locals
+		return nil, nil, fmt.Errorf("cannot redefine `%s` (use `set` here instead of `def`)", name)
 	}
 
 	expr, err := evalAndApply(env, args[1])
@@ -178,7 +177,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
-	if err = checkArgCountAtLeast(1, args); err != nil {
+	if err = checkArgsCountAtLeast(1, args); err != nil {
 		return
 	}
 	for _, arg := range args[:len(args)-1] {
@@ -191,7 +190,7 @@ func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 }
 
 func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgCountAtLeast(2, args); err != nil {
+	if err := checkArgsCountAtLeast(2, args); err != nil {
 		return nil, nil, err
 	}
 	bindings, err := checkIsSeq(args[0])
@@ -204,7 +203,7 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err = checkArgCountExactly(2, pair); err != nil {
+		if err = checkArgsCountExactly(2, pair); err != nil {
 			return nil, nil, err
 		}
 		name, err := checkIs[ExprIdent](pair[0])
@@ -224,7 +223,7 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgCountExactly(3, args); err != nil {
+	if err := checkArgsCountExactly(3, args); err != nil {
 		return nil, nil, err
 	}
 	expr, err := evalAndApply(env, args[0])
@@ -239,7 +238,7 @@ func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgCountAtLeast(2, args); err != nil {
+	if err := checkArgsCountAtLeast(2, args); err != nil {
 		return nil, nil, err
 	}
 	params, err := checkIsSeq(args[0])
@@ -254,22 +253,22 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 		body = append(ExprList{ExprIdent("do")}, args[1:]...)
 	}
 	var expr Expr = &ExprFn{params: params, body: body, env: env}
-	if disableTco {
+	if disableTcoFuncs {
 		expr = expr.(*ExprFn).ToFunc()
 	}
 	return nil, expr, nil
 }
 
-func (me *ExprFn) newEnv(callerArgs []Expr) (*Env, error) {
-	if err := checkArgCountExactly(len(me.params), callerArgs); err != nil {
+func (me *ExprFn) envWith(args []Expr) (*Env, error) {
+	if err := checkArgsCountExactly(len(me.params), args); err != nil {
 		return nil, err
 	}
-	return newEnv(me.env, me.params, callerArgs), nil
+	return newEnv(me.env, me.params, args), nil
 }
 
 func (me *ExprFn) ToFunc() ExprFunc {
-	return ExprFunc(func(callerArgs []Expr) (Expr, error) {
-		env, err := me.newEnv(callerArgs)
+	return ExprFunc(func(args []Expr) (Expr, error) {
+		env, err := me.envWith(args)
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +282,7 @@ func str(args []Expr, printReadably bool) string {
 		if i > 0 && printReadably {
 			buf.WriteByte(' ')
 		}
-		buf.WriteString(printExpr(arg, printReadably))
+		buf.WriteString(exprToString(arg, printReadably))
 	}
 	return buf.String()
 }
@@ -308,7 +307,7 @@ func stdList(args []Expr) (Expr, error) {
 }
 
 func stdIs(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(2, args); err != nil {
+	if err := checkArgsCountExactly(2, args); err != nil {
 		return nil, err
 	}
 	kind, err := checkIs[ExprKeyword](args[0])
@@ -342,7 +341,7 @@ func stdIs(args []Expr) (Expr, error) {
 }
 
 func stdIsEmpty(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(1, args); err != nil {
+	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
 	list, err := checkIs[ExprList](args[0])
@@ -353,7 +352,7 @@ func stdIsEmpty(args []Expr) (Expr, error) {
 }
 
 func stdCount(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(1, args); err != nil {
+	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
 	list, err := checkIs[ExprList](args[0])
@@ -364,14 +363,14 @@ func stdCount(args []Expr) (Expr, error) {
 }
 
 func stdEq(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(2, args); err != nil {
+	if err := checkArgsCountExactly(2, args); err != nil {
 		return nil, err
 	}
 	return exprBool(isEq(args[0], args[1])), nil
 }
 
 func compare(args []Expr) (int, error) {
-	if err := checkArgCountExactly(2, args); err != nil {
+	if err := checkArgsCountExactly(2, args); err != nil {
 		return 0, err
 	}
 	switch it := args[0].(type) {
@@ -384,7 +383,7 @@ func compare(args []Expr) (int, error) {
 			return cmp.Compare(it, other), nil
 		}
 	}
-	return 0, fmt.Errorf("specified operands are not comparable")
+	return 0, fmt.Errorf("specified operands `%#v` and `%#v` are not comparable", args[0], args[1])
 }
 
 func stdCmp(args []Expr) (Expr, error) {
@@ -424,7 +423,7 @@ func stdGe(args []Expr) (Expr, error) {
 }
 
 func stdReadExpr(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(1, args); err != nil {
+	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
 	src, err := checkIs[ExprStr](args[0])
@@ -435,7 +434,7 @@ func stdReadExpr(args []Expr) (Expr, error) {
 }
 
 func stdReadTextFile(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(1, args); err != nil {
+	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
 	file_path, err := checkIs[ExprStr](args[0])
@@ -450,7 +449,7 @@ func stdReadTextFile(args []Expr) (Expr, error) {
 }
 
 func stdEval(args []Expr) (Expr, error) {
-	if err := checkArgCountExactly(1, args); err != nil {
+	if err := checkArgsCountExactly(1, args); err != nil {
 		return nil, err
 	}
 	return evalAndApply(&envMain, args[0])

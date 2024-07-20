@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	src_stdlib := ` ; separate each top-level def by an empty line (ie. 2 newlines) due to the below hacky loading
+	const src_stdlib = `
 (def not
   (fn (b)
     (if b :false :true)))
@@ -21,22 +21,20 @@ func main() {
     (eval expr)))
 `
 
-	for _, stdlib_def := range strings.Split(src_stdlib, "\n\n") {
-		if _, err := replNext(stdlib_def); err != nil {
-			panic(err)
-		}
+	if _, err := readAndEval("(do " + src_stdlib + "\n:nil)"); err != nil {
+		panic(err)
 	}
 
 	readln := bufio.NewScanner(os.Stdin) // want line-editing? just run with `rlwrap`
 	const prompt = "\n࿊  "
 	fmt.Print(prompt)
-	for readln.Scan() {
+	for readln.Scan() { // read-eval-print loop (REPL)
 		input := strings.TrimSpace(readln.Text())
-		output, err := replNext(input)
+		expr, err := readAndEval(input)
 		if err != nil {
 			msg := err.Error()
 			os.Stderr.WriteString(strings.Repeat("~", 2+len(msg)) + "\n " + msg + "\n" + strings.Repeat("~", 2+len(msg)) + "\n")
-		} else if output != "" {
+		} else if output := exprToString(expr, true); output != "" {
 			fmt.Println(output)
 		}
 		fmt.Print(prompt)
@@ -46,26 +44,10 @@ func main() {
 	}
 }
 
-func replNext(str string) (string, error) {
-	expr, err := replRead(str)
+func readAndEval(str string) (Expr, error) {
+	expr, err := readExpr(str)
 	if err != nil || expr == nil {
-		return "", err
+		return nil, err
 	}
-	expr, err = replEval(expr, &envMain)
-	if err != nil {
-		return "", err
-	}
-	return replPrint(expr), nil
-}
-
-func replRead(str string) (Expr, error) {
-	return readExpr(str)
-}
-
-func replEval(expr Expr, env *Env) (Expr, error) {
-	return evalAndApply(env, expr)
-}
-
-func replPrint(expr Expr) string {
-	return printExpr(expr, true)
+	return evalAndApply(&envMain, expr)
 }
