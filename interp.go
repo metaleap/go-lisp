@@ -5,9 +5,12 @@ import (
 	"fmt"
 )
 
+// to confirm TCO still works, uncomment the 2 commented lines in here:
 func evalAndApply(env *Env, expr Expr) (Expr, error) {
+	// id := time.Now().UnixNano()
 	var err error
 	for env != nil {
+		// println("ITER", id, printExpr(expr, true))
 		if it, is := expr.(ExprList); (!is) || len(it) == 0 {
 			expr, err = evalExpr(env, expr)
 			env = nil

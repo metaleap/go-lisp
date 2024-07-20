@@ -27,7 +27,7 @@ type ExprList []Expr
 type ExprVec []Expr
 type ExprHashMap map[ExprStr]Expr
 type ExprFunc func(*Env, []Expr) (Expr, error)
-type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice. `ExprFn` is a wrapper with `ExprFn.Call` being its `ExprFunc`.
+type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
 	params []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
 	body   Expr
 	env    *Env

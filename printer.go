@@ -38,6 +38,8 @@ func printExpr(obj Expr, printReadably bool) string {
 		return string(tobj)
 	case ExprFunc:
 		return fmt.Sprintf("<function %#v>", tobj)
+	case *ExprFn:
+		return fmt.Sprintf("<function %#v>", tobj)
 	case ExprNum:
 		return strconv.Itoa(int(tobj))
 	default:

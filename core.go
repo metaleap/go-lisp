@@ -187,18 +187,6 @@ func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 	return
 }
 
-func tmpDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
-	if err = reqArgCountAtLeast(1, args); err != nil {
-		return
-	}
-	for _, arg := range args {
-		if expr, err = evalAndApply(env, arg); err != nil {
-			return
-		}
-	}
-	return
-}
-
 func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := reqArgCountAtLeast(2, args); err != nil {
 		return nil, nil, err
@@ -272,13 +260,16 @@ func (me *ExprFn) newEnv(callerArgs []Expr) (*Env, error) {
 	return newEnv(me.env, me.params, callerArgs), nil
 }
 
-func (me *ExprFn) Call(_ *Env, callerArgs []Expr) (Expr, error) {
-	env, err := me.newEnv(callerArgs)
-	if err != nil {
-		return nil, err
-	}
-	return evalAndApply(env, me.body)
-}
+// // not really needed right now, but let's keep it around for the time being
+// func (me *ExprFn) ToFunc() ExprFunc {
+// 	return ExprFunc(func(_ *Env, callerArgs []Expr) (Expr, error) {
+// 		env, err := me.newEnv(callerArgs)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		return evalAndApply(env, me.body)
+// 	})
+// }
 
 func str(args []Expr, printReadably bool) string {
 	var buf strings.Builder
