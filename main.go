@@ -67,8 +67,12 @@ const srcMiniStdlib = `
   (macro (b1 b2)
     ´(if ~b1 :true ~b2)))
 
+(def nth (fn (list idx) (at list idx)))
+(def first (fn (list) (at list 0)))
+(def rest (fn (list) (at list 1 -1)))
+
 (def cond
-    (macro (& xs)
+    (macro (xs)
         (if (> (count xs) 0)
             (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw "odd number of forms to cond")) (cons 'cond (rest (rest xs)))))))
 
