@@ -272,9 +272,12 @@ func stdTryCatch(env *Env, args []Expr) (*Env, Expr, error) {
 		if !is {
 			err_expr = ExprErr{It: err}
 		}
-		env.set(catch[1].(ExprIdent), err_expr)
+		if expr, is = err_expr.It.(Expr); !is {
+			expr = err_expr
+		}
+		env.set(catch[1].(ExprIdent), expr)
 		return env, catch[2], nil
 	}
 
-	return nil, expr, err
+	return nil, expr, nil
 }

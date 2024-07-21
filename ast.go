@@ -128,6 +128,10 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 		return false
 	}
 	switch arg1.(type) {
+	case ExprErr: // TODO: not fully correct this way:
+		return ((reflect.TypeOf(arg1.(ExprErr).It) == reflect.TypeOf(arg2.(ExprErr).It)) && (arg1.(ExprErr).Error() == arg2.(ExprErr).Error()))
+	case *ExprAtom:
+		return arg1.(*ExprAtom).Ref == arg2.(*ExprAtom).Ref
 	case ExprVec, ExprList:
 		sl1, _ := checkIsSeq(arg1)
 		sl2, _ := checkIsSeq(arg2)

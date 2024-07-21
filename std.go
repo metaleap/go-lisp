@@ -183,7 +183,7 @@ func stdIs(args []Expr) (Expr, error) {
 			_, ok = args[1].(ExprFunc)
 		}
 	case ":err":
-		_, ok = args[1].(*ExprErr)
+		_, ok = args[1].(ExprErr)
 	case ":atom":
 		_, ok = args[1].(*ExprAtom)
 	default:
@@ -418,5 +418,9 @@ func stdThrow(args []Expr) (Expr, error) {
 	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
-	return nil, ExprErr{It: args[0]}
+	expr_err, is := args[0].(ExprErr)
+	if !is {
+		expr_err = ExprErr{It: args[0]}
+	}
+	return nil, expr_err
 }
