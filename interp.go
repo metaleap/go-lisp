@@ -31,7 +31,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					return nil, err
 				}
 			} else {
-				trace(func() string { return fmt.Sprintf("CALL>>%s", str([]Expr{it}, true)) })
+				trace(func() string { return fmt.Sprintf("CALL>>%s", str(true, it)) })
 				expr, err = evalExpr(env, it)
 				if err != nil {
 					return nil, err
@@ -42,9 +42,9 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				default:
 					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", callee))
 				case ExprFunc:
-					trace(func() string { return fmt.Sprintf("AKA>>>%s", str([]Expr{call}, true)) })
+					trace(func() string { return fmt.Sprintf("AKA>>>%s", str(true, call)) })
 					expr, err = fn(args)
-					trace(func() string { return fmt.Sprintf("RET<<<%s", str([]Expr{expr}, true)) })
+					trace(func() string { return fmt.Sprintf("RET<<<%s", str(true, expr)) })
 					env = nil
 				case *ExprFn:
 					expr = fn.body

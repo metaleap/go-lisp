@@ -26,6 +26,7 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 		exprIdentQuote:      stdQuote,
 		exprIdentQuasiQuote: stdQuasiQuote,
 		"macroExpand":       stdMacroExpand,
+		"try":               stdTryCatch,
 	}
 }
 
@@ -251,4 +252,29 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 		return nil, (ExprVec)(expr), nil
 	}
 	return nil, expr, nil
+}
+
+func stdTryCatch(env *Env, args []Expr) (*Env, Expr, error) {
+	if err := checkArgsCount(2, 2, args); err != nil {
+		return nil, nil, err
+	}
+
+	catch, ok, err := isListStartingWithIdent(args[1], "catch", 3)
+	if err != nil {
+		return nil, nil, err
+	} else if !ok {
+		return nil, nil, fmt.Errorf("expected `(catch theErr exprHandlingIt)` as the last form in `try` , instead of `%s`", str(true, args[1]))
+	}
+
+	expr, err := evalAndApply(env, args[0])
+	if err != nil {
+		err_expr, is := err.(ExprErr)
+		if !is {
+			err_expr = ExprErr{It: err}
+		}
+		env.set(catch[1].(ExprIdent), err_expr)
+		return env, catch[2], nil
+	}
+
+	return nil, expr, err
 }

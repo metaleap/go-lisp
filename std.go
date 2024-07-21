@@ -36,6 +36,8 @@ var (
 		"cons":         ExprFunc(stdCons),
 		"concat":       ExprFunc(stdConcat),
 		"at":           ExprFunc(stdListAt),
+		"error":        ExprFunc(stdError),
+		"throw":        ExprFunc(stdThrow),
 	}}
 )
 
@@ -134,18 +136,18 @@ func stdDiv(args []Expr) (Expr, error) {
 }
 
 func stdPrint(args []Expr) (Expr, error) {
-	os.Stdout.WriteString(str(args, true))
+	os.Stdout.WriteString(str(true, args...))
 	return exprNil, nil
 }
 func stdPrintln(args []Expr) (Expr, error) {
-	os.Stdout.WriteString(str(args, false) + "\n")
+	os.Stdout.WriteString(str(false, args...) + "\n")
 	return exprNil, nil
 }
 func stdStr(args []Expr) (Expr, error) {
-	return ExprStr(str(args, false)), nil
+	return ExprStr(str(false, args...)), nil
 }
 func stdShow(args []Expr) (Expr, error) {
-	return ExprStr(str(args, true)), nil
+	return ExprStr(str(true, args...)), nil
 }
 
 func stdList(args []Expr) (Expr, error) {
@@ -180,10 +182,12 @@ func stdIs(args []Expr) (Expr, error) {
 		if _, ok = args[1].(*ExprFn); !ok {
 			_, ok = args[1].(ExprFunc)
 		}
+	case ":err":
+		_, ok = args[1].(*ExprErr)
 	case ":atom":
 		_, ok = args[1].(*ExprAtom)
 	default:
-		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`, `:atom`", kind)
+		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`, `:atom`, `:err`", kind)
 	}
 	return exprBool(ok), nil
 }
@@ -401,4 +405,18 @@ func stdListAt(args []Expr) (Expr, error) {
 	}
 
 	return ExprList(list[idx_start:idx_end]), nil
+}
+
+func stdError(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	return ExprErr{It: args[0]}, nil
+}
+
+func stdThrow(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	return nil, ExprErr{It: args[0]}
 }

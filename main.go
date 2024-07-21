@@ -62,6 +62,8 @@ func addOsArgsToEnv() {
 }
 
 const srcMiniStdlibNonMacros = `
+
+
 (def not
 	(fn (any)
 		(if any :false :true)))
@@ -83,18 +85,12 @@ const srcMiniStdlibNonMacros = `
 		(def expr (readExpr src))
 		(eval expr)))
 
-(def tmp
-	(fn ()
-		(caseOf [
-			[(= 1 2)
-				:impossible]
-			[(< 22 11)
-				:never]
-			[:else
-				:ohai]])))
+
 `
 
 const srcMiniStdlibMacros = `
+
+
 (def caseOf
 	(macro (cases)
 		(if (isEmpty cases)
@@ -119,4 +115,6 @@ const srcMiniStdlibMacros = `
 		(if (and (is :list call) (> (count call) 1))
 			(cons (at call -1) (at call 0 -2))
 			call)))
+
+
 `

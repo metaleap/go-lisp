@@ -56,13 +56,22 @@ func exprWriteTo(w Writer, expr Expr, srcLike bool) {
 		}
 	case ExprNum:
 		w.WriteString(strconv.Itoa(int(it)))
+	case ExprErr:
+		if srcLike {
+			w.WriteString("(error ")
+			w.WriteString(it.Error())
+			w.WriteByte(')')
+		} else {
+			w.WriteString(it.Error())
+		}
 	case *ExprAtom:
 		if srcLike {
-			w.WriteString("(atom ")
+			w.WriteString("(atomFrom ")
 			exprWriteTo(w, it.Ref, true)
 			w.WriteByte(')')
+		} else {
+			exprWriteTo(w, it.Ref, false)
 		}
-		exprWriteTo(w, it.Ref, false)
 	default:
 		w.WriteString(fmt.Sprintf("%#v", it))
 	}

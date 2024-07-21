@@ -26,6 +26,7 @@ func (ExprList) isExpr()    {}
 func (ExprVec) isExpr()     {}
 func (ExprHashMap) isExpr() {}
 func (*ExprAtom) isExpr()   {}
+func (ExprErr) isExpr()     {}
 func (ExprFunc) isExpr()    {}
 func (*ExprFn) isExpr()     {}
 
@@ -37,6 +38,7 @@ type ExprList []Expr
 type ExprVec []Expr
 type ExprHashMap map[ExprStr]Expr
 type ExprAtom struct{ Ref Expr }
+type ExprErr struct{ It any }
 type ExprFunc func([]Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
 	params     []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
@@ -68,6 +70,16 @@ func (me *ExprFn) Call(args []Expr) (Expr, error) {
 		return nil, err
 	}
 	return evalAndApply(env, me.body)
+}
+
+func (me ExprErr) Error() string {
+	if err, _ := me.It.(error); err != nil {
+		return err.Error()
+	}
+	if expr, _ := me.It.(Expr); expr != nil {
+		return str(false, expr)
+	}
+	return fmt.Sprintf("%#v", me.It)
 }
 
 func exprBool(b bool) ExprKeyword {
@@ -102,7 +114,7 @@ func isListOrVec(seq Expr) bool {
 func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
 	if list, _ := maybeList.(ExprList); len(list) > 0 {
 		if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
-			if err := checkArgsCount(mustHaveLen, mustHaveLen, list); err == nil {
+			if err = checkArgsCount(mustHaveLen, mustHaveLen, list); err == nil {
 				return list, true, nil
 			}
 		}
@@ -163,13 +175,13 @@ func newHashMap(seq Expr) (Expr, error) {
 	return hash_map, nil
 }
 
-func str(args []Expr, printReadably bool) string {
+func str(srcLike bool, args ...Expr) string {
 	var buf strings.Builder
 	for i, arg := range args {
-		if i > 0 && printReadably {
+		if i > 0 && srcLike {
 			buf.WriteByte(' ')
 		}
-		exprWriteTo(&buf, arg, printReadably)
+		exprWriteTo(&buf, arg, srcLike)
 	}
 	return buf.String()
 }
