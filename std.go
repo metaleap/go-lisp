@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 )
 
 var (
@@ -38,9 +40,16 @@ var (
 		"at":           ExprFunc(stdListAt),
 		"error":        ExprFunc(stdError),
 		"throw":        ExprFunc(stdThrow),
-		// "ident":        ExprFunc(stdIdent),
-		// "keyword":      ExprFunc(stdKeyword),
-		// "hashmap":      ExprFunc(stdHashmap),
+		"ident":        ExprFunc(stdIdent),
+		"keyword":      ExprFunc(stdKeyword),
+		"hashmap":      ExprFunc(stdHashmap),
+		"hashmapSet":   ExprFunc(stdHashmapSet),
+		"hashmapDel":   ExprFunc(stdHashmapDel),
+		"hashmapGet":   ExprFunc(stdHashmapGet),
+		"hashmapHas":   ExprFunc(stdHashmapHas),
+		"hashmapKeys":  ExprFunc(stdHashmapKeys),
+		"hashmapVals":  ExprFunc(stdHashmapVals),
+		"apply":        ExprFunc(stdApply),
 	}}
 )
 
@@ -360,8 +369,11 @@ func stdConcat(args []Expr) (Expr, error) {
 }
 
 func stdVec(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(0, 1, args); err != nil {
 		return nil, err
+	}
+	if len(args) == 0 {
+		return ExprVec{}, nil
 	}
 	if vec, is_vec := args[0].(ExprVec); is_vec {
 		return vec, nil
@@ -430,4 +442,185 @@ func stdThrow(args []Expr) (Expr, error) {
 		expr_err = ExprErr{It: args[0]}
 	}
 	return nil, expr_err
+}
+
+func stdIdent(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	str, err := checkIs[ExprStr](args[0])
+	if err != nil {
+		return nil, err
+	}
+	if str = ExprStr(strings.TrimSpace(string(str))); str == "" {
+		return nil, fmt.Errorf("empty idents are not supported")
+	}
+	return ExprIdent(str), nil
+}
+
+func stdKeyword(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	str, err := checkIs[ExprStr](args[0])
+	if err != nil {
+		return nil, err
+	}
+	if str = ExprStr(strings.TrimSpace(string(str))); str == "" || str == ":" {
+		return nil, fmt.Errorf("empty keywords are not supported")
+	}
+	if str[0] != ':' {
+		str = ":" + str
+	}
+	return ExprKeyword(str), nil
+}
+
+func stdHashmap(args []Expr) (Expr, error) {
+	if (len(args) % 2) != 0 {
+		return nil, fmt.Errorf("expected an even number of arguments, not %d", len(args))
+	}
+	expr := make(ExprHashMap, len(args)/2)
+	for i := 1; i < len(args); i += 2 {
+		key, val := args[i-1], args[i]
+		if _, err := checkIs[ExprStr](key); err != nil {
+			return nil, err
+		}
+		expr[key.(ExprStr)] = val
+	}
+	return expr, nil
+}
+
+func stdHashmapHas(args []Expr) (Expr, error) {
+	if err := checkArgsCount(2, 2, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	key, err := checkIs[ExprStr](args[1])
+	if err != nil {
+		return nil, err
+	}
+	_, exists := hashmap[key]
+	return exprBool(exists), nil
+}
+
+func stdHashmapGet(args []Expr) (Expr, error) {
+	if err := checkArgsCount(2, 2, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	key, err := checkIs[ExprStr](args[1])
+	if err != nil {
+		return nil, err
+	}
+	value, exists := hashmap[key]
+	if !exists {
+		return exprNil, nil
+	}
+	return value, nil
+}
+
+func stdHashmapDel(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, -1, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	if len(args) == 1 {
+		return hashmap, nil
+	}
+	keys_to_delete := args[1:]
+	if err := checkAre[ExprStr](keys_to_delete...); err != nil {
+		return nil, err
+	}
+
+	new_hashmap := make(ExprHashMap, len(hashmap)-len(keys_to_delete))
+	for k, v := range hashmap {
+		if !slices.ContainsFunc(keys_to_delete, func(it Expr) bool { return it.(ExprIdent) == ExprIdent(k) }) {
+			new_hashmap[k] = v
+		}
+	}
+	return new_hashmap, nil
+}
+
+func stdHashmapSet(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, -1, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	if len(args) == 1 {
+		return hashmap, nil
+	}
+
+	expr, err := stdHashmap(args[1:])
+	if err != nil {
+		return nil, err
+	}
+	new_hashmap := expr.(ExprHashMap)
+	for k, v := range hashmap {
+		if _, exists := new_hashmap[k]; !exists {
+			new_hashmap[k] = v
+		}
+	}
+	return new_hashmap, nil
+}
+
+func stdHashmapKeys(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	ret := make(ExprList, 0, len(hashmap))
+	for k := range hashmap {
+		ret = append(ret, k)
+	}
+	return ret, nil
+}
+
+func stdHashmapVals(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	hashmap, err := checkIs[ExprHashMap](args[0])
+	if err != nil {
+		return nil, err
+	}
+	ret := make(ExprList, 0, len(hashmap))
+	for _, v := range hashmap {
+		ret = append(ret, v)
+	}
+	return ret, nil
+}
+
+func stdApply(args []Expr) (Expr, error) {
+	if err := checkArgsCount(2, -1, args); err != nil {
+		return nil, err
+	}
+	args_final_list, err := checkIsSeq(args[len(args)-1])
+	if err != nil {
+		return nil, err
+	}
+	args_list := append(args[1:len(args)-1], args_final_list...)
+
+	switch fn := args[0].(type) {
+	case *ExprFn:
+		return fn.Call(args_list)
+	case ExprFunc:
+		return fn(args_list)
+	}
+
+	return nil, fmt.Errorf("not callable: %s", str(true, args[0]))
 }

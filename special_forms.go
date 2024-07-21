@@ -27,7 +27,6 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 		exprIdentQuasiQuote: stdQuasiQuote,
 		"macroExpand":       stdMacroExpand,
 		"try":               stdTryCatch,
-		"apply":             stdApply,
 	}
 }
 
@@ -281,17 +280,4 @@ func stdTryCatch(env *Env, args []Expr) (*Env, Expr, error) {
 	}
 
 	return nil, expr, nil
-}
-
-func stdApply(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCount(2, -1, args); err != nil {
-		return nil, nil, err
-	}
-	args_final_list, err := checkIsSeq(args[len(args)-1])
-	if err != nil {
-		return nil, nil, err
-	}
-	args_list := append(args[1:len(args)-1], args_final_list...)
-	call_form := append(ExprList{args[0]}, args_list...)
-	return env, call_form, nil
 }

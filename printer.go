@@ -39,7 +39,7 @@ func exprWriteTo(w Writer, expr Expr, srcLike bool) {
 		w.WriteByte('{')
 		for k, v := range it {
 			w.WriteByte(' ')
-			w.WriteString(string(k))
+			exprWriteTo(w, k, srcLike)
 			w.WriteByte(' ')
 			exprWriteTo(w, v, srcLike)
 		}
