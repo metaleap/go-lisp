@@ -140,6 +140,7 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, nil, err
 	}
+
 	params, err := checkIsSeq(args[0])
 	if err != nil {
 		return nil, nil, err
@@ -147,11 +148,20 @@ func stdFn(env *Env, args []Expr) (*Env, Expr, error) {
 	if err := checkAre[ExprIdent](params...); err != nil {
 		return nil, nil, err
 	}
+	var is_variadic bool
+	if len(params) >= 2 {
+		if amper := params[len(params)-2].(ExprIdent); amper == "&" {
+			is_variadic = true // and we remove the ampersand param:
+			params = append(params[:len(params)-2], params[len(params)-1])
+		}
+	}
+
 	body := args[1]
 	if len(args) > 2 {
 		body = append(ExprList{exprIdentDo}, args[1:]...)
 	}
-	var expr Expr = &ExprFn{params: params, body: body, env: env}
+	var expr Expr = &ExprFn{params: params, body: body, env: env, isVariadic: is_variadic}
+
 	if disableTcoFuncs {
 		expr = (ExprFunc)(expr.(*ExprFn).Call)
 	}

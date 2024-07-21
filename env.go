@@ -12,12 +12,12 @@ type Env struct {
 	Map    map[ExprIdent]Expr
 }
 
-func newEnv(parent *Env, binds []Expr, exprs []Expr) *Env {
-	if len(binds) != len(exprs) {
-		panic(fmt.Sprintf("%d vs %d", len(binds), len(exprs)))
+func newEnv(parent *Env, names []Expr, exprs []Expr) *Env {
+	if len(names) != len(exprs) {
+		panic(fmt.Sprintf("NEWLY INTRO'd BUG in go-lisp codebase: %d vs %d", len(names), len(exprs)))
 	}
-	ret := Env{Parent: parent, Map: make(map[ExprIdent]Expr, len(binds))}
-	for i, bind := range binds {
+	ret := Env{Parent: parent, Map: make(map[ExprIdent]Expr, len(names))}
+	for i, bind := range names {
 		ret.Map[bind.(ExprIdent)] = exprs[i]
 	}
 	return &ret

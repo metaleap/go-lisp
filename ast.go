@@ -39,15 +39,24 @@ type ExprHashMap map[ExprStr]Expr
 type ExprAtom struct{ Ref Expr }
 type ExprFunc func([]Expr) (Expr, error)
 type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would suffice.
-	params  []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
-	body    Expr
-	env     *Env
-	isMacro bool
+	params     []Expr // all are guaranteed to be `ExprIdent` before constructing an `ExprFn`
+	body       Expr
+	env        *Env
+	isMacro    bool
+	isVariadic bool
 }
 
 func (me *ExprFn) envWith(args []Expr) (*Env, error) {
-	if err := checkArgsCount(len(me.params), len(me.params), args); err != nil {
+	num_args_min, num_args_max := len(me.params), len(me.params)
+	if me.isVariadic {
+		num_args_min, num_args_max = len(me.params)-1, -1
+	}
+	if err := checkArgsCount(num_args_min, num_args_max, args); err != nil {
 		return nil, err
+	}
+	if me.isVariadic {
+		the_var_args := args[len(me.params)-1:]
+		args = append(args[:len(me.params)-1], (ExprList)(the_var_args))
 	}
 	return newEnv(me.env, me.params, args), nil
 }

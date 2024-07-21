@@ -377,11 +377,14 @@ func stdListAt(args []Expr) (Expr, error) {
 	} else if idx_start < 0 {
 		idx_start = ExprNum(len(list) + int(idx_start))
 	}
-	if (int(idx_start) >= len(list)) || (idx_start < 0) {
+
+	err_out_of_range := (idx_start < 0) || (int(idx_start) > len(list))
+	is_range := (len(args) == 3)
+	err_out_of_range = err_out_of_range || ((!is_range) && (int(idx_start) == len(list)))
+	if err_out_of_range {
 		return nil, fmt.Errorf("index %d out of range with list of length %d", idx_start, len(list))
 	}
-
-	if is_range := (len(args) == 3); !is_range {
+	if !is_range {
 		return list[idx_start], nil
 	}
 
