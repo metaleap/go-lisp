@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
+	"time"
 )
 
 var (
@@ -17,6 +19,7 @@ var (
 		"is":           ExprFunc(stdIs),
 		"list":         ExprFunc(stdList),
 		"vec":          ExprFunc(stdVec),
+		"vector":       ExprFunc(stdVec),
 		"count":        ExprFunc(stdCount),
 		"isEmpty":      ExprFunc(stdIsEmpty),
 		"cmp":          ExprFunc(stdCmp),
@@ -50,6 +53,10 @@ var (
 		"hashmapKeys":  ExprFunc(stdHashmapKeys),
 		"hashmapVals":  ExprFunc(stdHashmapVals),
 		"apply":        ExprFunc(stdApply),
+		"readLine":     ExprFunc(stdReadLine),
+		"quit":         ExprFunc(stdQuit),
+		"exit":         ExprFunc(stdQuit),
+		"time-ms":      ExprFunc(stdTimeMs),
 	}}
 )
 
@@ -623,4 +630,35 @@ func stdApply(args []Expr) (Expr, error) {
 	}
 
 	return nil, fmt.Errorf("not callable: %s", str(true, args[0]))
+}
+
+func stdReadLine(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	prompt, err := checkIs[ExprStr](args[0])
+	if err != nil {
+		return nil, nil
+	}
+	os.Stdout.Write([]byte(prompt))
+	input, err := readUntil(os.Stdin, '\n', 128)
+	if err == io.EOF {
+		return exprNil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return ExprStr(input), nil
+}
+
+func stdQuit(args []Expr) (Expr, error) {
+	var exit_code ExprNum
+	if len(args) > 0 {
+		exit_code, _ = args[0].(ExprNum)
+	}
+	os.Exit(int(exit_code))
+	return exprNil, nil
+}
+
+func stdTimeMs(args []Expr) (Expr, error) {
+	return ExprNum(time.Now().UnixMilli()), nil
 }
