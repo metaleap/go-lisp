@@ -38,6 +38,9 @@ var (
 		"at":           ExprFunc(stdListAt),
 		"error":        ExprFunc(stdError),
 		"throw":        ExprFunc(stdThrow),
+		// "ident":        ExprFunc(stdIdent),
+		// "keyword":      ExprFunc(stdKeyword),
+		// "hashmap":      ExprFunc(stdHashmap),
 	}}
 )
 
@@ -176,6 +179,10 @@ func stdIs(args []Expr) (Expr, error) {
 		_, ok = args[1].(ExprList)
 	case ":vec":
 		_, ok = args[1].(ExprVec)
+	case ":seq":
+		if _, ok = args[1].(ExprList); !ok {
+			_, ok = args[1].(ExprVec)
+		}
 	case ":hashmap":
 		_, ok = args[1].(ExprHashMap)
 	case ":fn":

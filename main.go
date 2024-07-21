@@ -85,6 +85,12 @@ const srcMiniStdlibNonMacros = `
 		(def expr (readExpr src))
 		(eval expr)))
 
+(def map
+	(fn (func list)
+		(if (isEmpty list)
+			()
+			(cons (func (first list)) (map func (rest list))))))
+
 
 `
 
