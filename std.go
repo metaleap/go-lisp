@@ -543,7 +543,7 @@ func stdHashmapDel(args []Expr) (Expr, error) {
 
 	new_hashmap := make(ExprHashMap, len(hashmap)-len(keys_to_delete))
 	for k, v := range hashmap {
-		if !slices.ContainsFunc(keys_to_delete, func(it Expr) bool { return it.(ExprIdent) == ExprIdent(k) }) {
+		if !slices.ContainsFunc(keys_to_delete, func(it Expr) bool { return it.(ExprStr) == ExprStr(k) }) {
 			new_hashmap[k] = v
 		}
 	}

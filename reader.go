@@ -80,8 +80,7 @@ func readList(r Reader, start string, end string) (Expr, error) {
 	}
 
 	var ast_list ExprList
-	token = r.peek()
-	for ; true; token = r.peek() {
+	for token = r.peek(); true; token = r.peek() {
 		if token == nil {
 			return nil, errors.New("expected '" + end + "', got EOF")
 		}
@@ -103,8 +102,7 @@ func readVec(r Reader) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	vec := ExprVec(list.(ExprList))
-	return vec, nil
+	return ExprVec(list.(ExprList)), nil
 }
 
 func readHashMap(r Reader) (Expr, error) {
@@ -112,7 +110,7 @@ func readHashMap(r Reader) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHashMap(list)
+	return stdHashmap(list.(ExprList))
 }
 
 func readForm(r Reader) (Expr, error) {

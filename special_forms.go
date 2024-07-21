@@ -255,8 +255,11 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdTryCatch(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(1, 2, args); err != nil {
 		return nil, nil, err
+	}
+	if len(args) == 1 {
+		return env, args[0], nil
 	}
 
 	catch, ok, err := isListStartingWithIdent(args[1], "catch", 3)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -158,25 +157,6 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 	default:
 		return arg1 == arg2
 	}
-}
-
-func newHashMap(seq Expr) (Expr, error) {
-	list, err := checkIsSeq(seq)
-	if err != nil {
-		return nil, err
-	}
-	if (len(list) % 2) != 0 {
-		return nil, errors.New("odd number of arguments to NewHashMap")
-	}
-	hash_map := ExprHashMap{}
-	for i := 1; i < len(list); i += 2 {
-		str, ok := list[i-1].(ExprStr)
-		if !ok {
-			return nil, errors.New("expected hash-map key string")
-		}
-		hash_map[str] = list[i]
-	}
-	return hash_map, nil
 }
 
 func str(srcLike bool, args ...Expr) string {
