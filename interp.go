@@ -5,7 +5,8 @@ import (
 	"fmt"
 )
 
-const disableTcoFuncs = false // caution: cannot use `macro`s if `true`; setting is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken.
+const disableTracing = true
+const disableTcoFuncs = false // caution: cannot def `macro`s if `true`; setting is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken.
 
 // to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below.
 // another way: run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
@@ -30,16 +31,20 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					return nil, err
 				}
 			} else {
+				trace(func() string { return fmt.Sprintf("CALL>>%s", str([]Expr{it}, true)) })
 				expr, err = evalExpr(env, it)
 				if err != nil {
 					return nil, err
 				}
-				callee, args := expr.(ExprList)[0], expr.(ExprList)[1:]
+				call := expr.(ExprList)
+				callee, args := call[0], call[1:]
 				switch fn := callee.(type) {
 				default:
 					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", callee))
 				case ExprFunc:
+					trace(func() string { return fmt.Sprintf("AKA>>>%s", str([]Expr{call}, true)) })
 					expr, err = fn(args)
+					trace(func() string { return fmt.Sprintf("RET<<<%s", str([]Expr{expr}, true)) })
 					env = nil
 				case *ExprFn:
 					expr = fn.body
@@ -90,4 +95,11 @@ func evalExpr(env *Env, expr Expr) (Expr, error) {
 		return list, nil
 	}
 	return expr, nil
+}
+
+func trace(msg func() string) {
+	if disableTracing {
+		return
+	}
+	println(msg())
 }
