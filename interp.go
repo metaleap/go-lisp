@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -40,7 +39,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				callee, args := call[0], call[1:]
 				switch fn := callee.(type) {
 				default:
-					return nil, errors.New("not callable: " + fmt.Sprintf("%#v", callee))
+					return nil, newErrNotCallable(callee)
 				case ExprFunc:
 					trace(func() string { return fmt.Sprintf("AKA>>>%s", str(true, call)) })
 					expr, err = fn(args)

@@ -67,64 +67,6 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 	envMain.Map["eval"] = ExprFunc(stdEval)
 }
 
-func checkArgsCount(wantAtLeast int, wantAtMost int, have []Expr) error {
-	if wantAtLeast < 0 {
-		return nil
-	} else if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
-		return fmt.Errorf("expected %d arg(s), not %d", want_exactly, len(have))
-	} else if len(have) < wantAtLeast {
-		return fmt.Errorf("expected at least %d arg(s), not %d", wantAtLeast, len(have))
-	} else if (wantAtMost > wantAtLeast) && (len(have) > wantAtMost) {
-		return fmt.Errorf("expected %d to %d arg(s), not %d", wantAtLeast, wantAtMost, len(have))
-	}
-	return nil
-}
-
-func checkIs[T Expr](have Expr) (T, error) {
-	ret, ok := have.(T)
-	if !ok {
-		return ret, fmt.Errorf("expected %T, not %T", ret, have)
-	}
-	return ret, nil
-}
-
-func checkAre[T Expr](have ...Expr) error {
-	for _, expr := range have {
-		if _, err := checkIs[T](expr); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, ret2 T2, err error) {
-	max_args_count := -1
-	if exactArgsCount {
-		max_args_count = 2
-	}
-	if err = checkArgsCount(2, max_args_count, have); err != nil {
-		return
-	}
-	if ret1, err = checkIs[T1](have[0]); err != nil {
-		return
-	}
-	if ret2, err = checkIs[T2](have[1]); err != nil {
-		return
-	}
-	return
-}
-
-func checkIsSeq(expr Expr) ([]Expr, error) {
-	switch expr := expr.(type) {
-	case ExprList:
-		return ([]Expr)(expr), nil
-	case ExprVec:
-		return ([]Expr)(expr), nil
-	default:
-		return nil, fmt.Errorf("expected list or vector, not %T", expr)
-	}
-}
-
 func stdAdd(args []Expr) (Expr, error) {
 	op1, op2, err := checkAreBoth[ExprNum, ExprNum](args, true)
 	if err != nil {
@@ -354,11 +296,19 @@ func stdAtomSwap(args []Expr) (Expr, error) {
 	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, err
 	}
-	atom, fn, err := checkAreBoth[*ExprAtom, *ExprFn](args, false)
+	atom, err := checkIs[*ExprAtom](args[0])
 	if err != nil {
 		return nil, err
 	}
-	atom.Ref, err = fn.Call(append([]Expr{atom.Ref}, args[2:]...))
+	call_args := append([]Expr{atom.Ref}, args[2:]...)
+	switch fn := args[1].(type) {
+	case *ExprFn:
+		atom.Ref, err = fn.Call(call_args)
+	case ExprFunc:
+		atom.Ref, err = fn(call_args)
+	default:
+		return nil, newErrNotCallable(fn)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -642,7 +592,7 @@ func stdApply(args []Expr) (Expr, error) {
 		return fn(args_list)
 	}
 
-	return nil, fmt.Errorf("not callable: %s", str(true, args[0]))
+	return nil, newErrNotCallable(args[0])
 }
 
 func stdReadLine(args []Expr) (Expr, error) {

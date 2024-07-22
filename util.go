@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"reflect"
 )
 
 func isNilOrFalse(expr Expr) bool {
@@ -25,6 +27,71 @@ func readUntil(r io.Reader, until byte, initialBufCapacity int) (string, error) 
 	return line, nil
 }
 
+func checkArgsCount(wantAtLeast int, wantAtMost int, have []Expr) error {
+	if wantAtLeast < 0 {
+		return nil
+	} else if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
+		return fmt.Errorf("expected %d arg(s), not %d", want_exactly, len(have))
+	} else if len(have) < wantAtLeast {
+		return fmt.Errorf("expected at least %d arg(s), not %d", wantAtLeast, len(have))
+	} else if (wantAtMost > wantAtLeast) && (len(have) > wantAtMost) {
+		return fmt.Errorf("expected %d to %d arg(s), not %d", wantAtLeast, wantAtMost, len(have))
+	}
+	return nil
+}
+
+func checkIs[T Expr](have Expr) (T, error) {
+	ret, ok := have.(T)
+	if !ok {
+		if reflect.TypeOf(ret) == reflect.TypeFor[*ExprFn]() {
+			panic("WHOIS?")
+		}
+		return ret, fmt.Errorf("expected %T, not %T", ret, have)
+	}
+	return ret, nil
+}
+
+func checkAre[T Expr](have ...Expr) error {
+	for _, expr := range have {
+		if _, err := checkIs[T](expr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, ret2 T2, err error) {
+	max_args_count := -1
+	if exactArgsCount {
+		max_args_count = 2
+	}
+	if err = checkArgsCount(2, max_args_count, have); err != nil {
+		return
+	}
+	if ret1, err = checkIs[T1](have[0]); err != nil {
+		return
+	}
+	if ret2, err = checkIs[T2](have[1]); err != nil {
+		return
+	}
+	return
+}
+
+func checkIsSeq(expr Expr) ([]Expr, error) {
+	switch expr := expr.(type) {
+	case ExprList:
+		return ([]Expr)(expr), nil
+	case ExprVec:
+		return ([]Expr)(expr), nil
+	default:
+		return nil, fmt.Errorf("expected list or vector, not %T", expr)
+	}
+}
+
+func newErrNotCallable(expr Expr) error {
+	return fmt.Errorf("not callable: `%s`", str(true, expr))
+}
+
 func makeCompatibleWithMAL() {
 	for mals, ours := range map[ExprIdent]ExprIdent{
 		"def!": "def",
@@ -37,14 +104,38 @@ func makeCompatibleWithMAL() {
 		}
 	}
 
+	for name, expr := range map[ExprIdent]Expr{
+		"pr-str": ExprFunc(func(args []Expr) (Expr, error) {
+			return ExprStr(str(true, args...)), nil
+		}),
+	} {
+		envMain.Map[name] = expr
+	}
+
 	for mals, ours := range map[ExprIdent]ExprIdent{
-		"pr-str":      "str",
 		"read-string": "readExpr",
 		"readline":    "readLine",
+		"atom":        "atomFrom",
+		"deref":       "atomGet",
+		"reset!":      "atomSet",
+		"swap!":       "atomSwap",
+		"empty?":      "isEmpty",
 	} {
 		it := envMain.Map[ours]
 		if envMain.Map[mals] = it; it == nil {
 			panic("mixed sth up huh?")
 		}
 	}
+
+	if _, err := readAndEval("(" + string(exprIdentDo) + " " + srcMiniStdlibMalCompat + "\n" + string(exprNil) + ")"); err != nil {
+		panic(err)
+	}
 }
+
+const srcMiniStdlibMalCompat = `
+
+(def list?
+	(fn (arg)
+		(is :list arg)))
+
+`

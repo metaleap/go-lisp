@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var malCompat = (os.Getenv("MAL_COMPAT") != "")
+
 func main() {
 	// load in the mini-stdlib
 	if !disableTcoFuncs {
@@ -18,7 +20,9 @@ func main() {
 		panic(err)
 	}
 
-	makeCompatibleWithMAL()
+	if malCompat {
+		makeCompatibleWithMAL()
+	}
 
 	// check if we are to run the REPL or run a specified source file
 	if len(os.Args) > 1 { // run the specified source file and exit
