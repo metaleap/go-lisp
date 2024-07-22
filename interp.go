@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-const disableTcoFuncs = false // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
-const disableTracing = true || !disableTcoFuncs
+const disableTcoFuncs = true // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
+const disableTracing = false || !disableTcoFuncs
 
 // to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below that are referring to `id`.
 // another way: run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
@@ -30,7 +30,7 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					return nil, err
 				}
 			} else {
-				trace(func() string { return fmt.Sprintf("CALL>>%s", str(true, it)) })
+				trace(true, func() string { return str(true, it) })
 				expr, err = evalExpr(env, it)
 				if err != nil {
 					return nil, err
@@ -41,9 +41,9 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				default:
 					return nil, newErrNotCallable(callee)
 				case ExprFunc:
-					trace(func() string { return fmt.Sprintf("AKA>>>%s", str(true, call)) })
+					trace(false, func() string { return fmt.Sprintf("CALL>>>%s", str(true, call)) })
 					expr, err = fn(args)
-					trace(func() string { return fmt.Sprintf("RET<<<%s", str(true, expr)) })
+					trace(false, func() string { return fmt.Sprintf("RET<<<%s", str(true, expr)) })
 					env = nil
 				case *ExprFn:
 					expr = fn.body
@@ -96,9 +96,15 @@ func evalExpr(env *Env, expr Expr) (Expr, error) {
 	return expr, nil
 }
 
-func trace(msg func() string) {
+func trace(isStackTraceAdd bool, msg func() string) {
 	if disableTracing {
 		return
 	}
-	println(msg())
+	str := msg()
+	if isStackTraceAdd {
+		stackTrace = append(stackTrace, str)
+	}
+	println(str)
 }
+
+var stackTrace []string

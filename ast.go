@@ -35,7 +35,7 @@ type ExprStr string
 type ExprNum int
 type ExprList []Expr
 type ExprVec []Expr
-type ExprHashMap map[ExprStr]Expr
+type ExprHashMap map[string]Expr
 type ExprAtom struct{ Ref Expr }
 type ExprErr struct{ It any }
 type ExprFunc func([]Expr) (Expr, error)
@@ -86,6 +86,13 @@ func exprBool(b bool) ExprKeyword {
 		return exprTrue
 	}
 	return exprFalse
+}
+
+func exprStrOrKeyword(s string) Expr {
+	if (s != "") && (s[0] == ':') {
+		return ExprKeyword(s)
+	}
+	return ExprStr(s)
 }
 
 func compare(args []Expr) (int, error) {

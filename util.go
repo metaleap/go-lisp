@@ -77,6 +77,16 @@ func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, 
 	return
 }
 
+func checkIsStrOrKeyword(expr Expr) (string, Expr, error) {
+	switch it := expr.(type) {
+	case ExprStr:
+		return string(it), it, nil
+	case ExprKeyword:
+		return string(it), it, nil
+	}
+	return "", nil, fmt.Errorf("expected string or keyword, not `%s`", str(true, expr))
+}
+
 func checkIsSeq(expr Expr) ([]Expr, error) {
 	switch expr := expr.(type) {
 	case ExprList:

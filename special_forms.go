@@ -56,7 +56,7 @@ func defOrSet(isDef bool, env *Env, args []Expr) (*Env, Expr, error) {
 		if _, err := env.get(name); err != nil {
 			return nil, nil, err
 		}
-	} else if env.hasOwn(name) { // cannot re`def` locals
+	} else if env.hasOwn(name) && !malCompat { // cannot re`def` locals
 		return nil, nil, fmt.Errorf("cannot redefine `%s` (use `set` here instead of `def`)", name)
 	}
 

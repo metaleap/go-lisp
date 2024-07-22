@@ -452,10 +452,11 @@ func stdHashmap(args []Expr) (Expr, error) {
 	expr := make(ExprHashMap, len(args)/2)
 	for i := 1; i < len(args); i += 2 {
 		key, val := args[i-1], args[i]
-		if _, err := checkIs[ExprStr](key); err != nil {
+		key_str, _, err := checkIsStrOrKeyword(key)
+		if err != nil {
 			return nil, err
 		}
-		expr[key.(ExprStr)] = val
+		expr[key_str] = val
 	}
 	return expr, nil
 }
@@ -468,11 +469,11 @@ func stdHashmapHas(args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := checkIs[ExprStr](args[1])
+	key_str, _, err := checkIsStrOrKeyword(args[1])
 	if err != nil {
 		return nil, err
 	}
-	_, exists := hashmap[key]
+	_, exists := hashmap[key_str]
 	return exprBool(exists), nil
 }
 
@@ -484,11 +485,11 @@ func stdHashmapGet(args []Expr) (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := checkIs[ExprStr](args[1])
+	key_str, _, err := checkIsStrOrKeyword(args[1])
 	if err != nil {
 		return nil, err
 	}
-	value, exists := hashmap[key]
+	value, exists := hashmap[key_str]
 	if !exists {
 		return exprNil, nil
 	}
@@ -555,7 +556,7 @@ func stdHashmapKeys(args []Expr) (Expr, error) {
 	}
 	ret := make(ExprList, 0, len(hashmap))
 	for k := range hashmap {
-		ret = append(ret, k)
+		ret = append(ret, exprStrOrKeyword(k))
 	}
 	return ret, nil
 }
