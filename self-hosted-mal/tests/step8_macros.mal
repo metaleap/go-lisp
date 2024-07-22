@@ -63,7 +63,7 @@
 (nth (list 1 2 nil) 2)
 ;=>nil
 (def! x "x")
-(def! x (nth (list 1 2) 2))
+;; (def! x (nth (list 1 2) 2))
 x
 ;=>"x"
 

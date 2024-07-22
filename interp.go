@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const disableTcoFuncs = true // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
+const disableTcoFuncs = false // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
 const disableTracing = true || !disableTcoFuncs
 
 // to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below that are referring to `id`.

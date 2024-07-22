@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 var malCompat = (os.Getenv("MAL_COMPAT") != "")
@@ -10,10 +11,11 @@ var malCompat = (os.Getenv("MAL_COMPAT") != "")
 func makeCompatibleWithMAL() {
 	// simple aliases: special-forms
 	for mals, ours := range map[ExprIdent]ExprIdent{
-		"def!":       "def",
-		"fn*":        "fn",
-		"try*":       "try",
-		"quasiquote": "quasiQuote",
+		"def!":        "def",
+		"fn*":         "fn",
+		"try*":        "try",
+		"quasiquote":  "quasiQuote",
+		"macroexpand": "macroExpand",
 	} {
 		it := specialForms[ours]
 		if specialForms[mals] = it; it == nil {
@@ -33,8 +35,14 @@ func makeCompatibleWithMAL() {
 		"reset!":      "atomSet",
 		"swap!":       "atomSwap",
 		"empty?":      "isEmpty",
-		"get":         "hashmapGet",
 		"*ARGV*":      "osArgs",
+		"hash-map":    "hashmap",
+		"assoc":       "hashmapSet",
+		"dissoc":      "hashmapDel",
+		"get":         "hashmapGet",
+		"contains?":   "hashmapHas",
+		"keys":        "hashmapKeys",
+		"vals":        "hashmapVals",
 	} {
 		it := envMain.Map[ours]
 		if envMain.Map[mals] = it; it == nil {
@@ -44,7 +52,16 @@ func makeCompatibleWithMAL() {
 
 	// non-alias-able funcs
 	for name, expr := range map[ExprIdent]Expr{
-		"pr-str": ExprFunc(func(args []Expr) (Expr, error) { return ExprStr(str(true, args...)), nil }),
+		"pr-str": ExprFunc(func(args []Expr) (Expr, error) {
+			var buf strings.Builder
+			for i, arg := range args {
+				if i > 0 {
+					buf.WriteByte(' ')
+				}
+				exprWriteTo(&buf, arg, true)
+			}
+			return ExprStr(buf.String()), nil
+		}),
 	} {
 		envMain.Map[name] = expr
 	}
@@ -75,6 +92,16 @@ func makeCompatibleWithMAL() {
 			the_bool, the_then, the_rest := args[0], args[1], args[2:]
 			call_form := ExprList{ExprIdent("if"), the_bool, the_then, append(ExprList{ExprIdent("cond")}, the_rest...)}
 			return env, call_form, nil
+		}),
+
+		"defmacro!": SpecialForm(func(env *Env, args []Expr) (*Env, Expr, error) {
+			if err := checkArgsCount(2, 2, args); err != nil {
+				return nil, nil, err
+			}
+			if _, is, _ := isListStartingWithIdent(args[1], "fn*", -1); is {
+				args[1].(ExprList)[0] = exprIdentMacro
+			}
+			return stdDef(env, args)
 		}),
 	} {
 		specialForms[name] = sf
@@ -109,6 +136,6 @@ const srcMiniStdlibMalCompat = `
 (def nil? (checker :nil))
 (def true? (checker :true))
 (def false? (checker :false))
-
+(def sequential? (checker :seq))
 
 `

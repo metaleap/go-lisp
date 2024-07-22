@@ -41,7 +41,7 @@ func main() {
 		if err != nil {
 			msg := err.Error()
 			os.Stderr.WriteString(strings.Repeat("~", 2+len(msg)) + "\n " + msg + "\n" + strings.Repeat("~", 2+len(msg)) + "\n")
-		} else if output := exprToString(expr, true); output != "" {
+		} else if output := str(true, expr); output != "" {
 			fmt.Println(output)
 		}
 	}

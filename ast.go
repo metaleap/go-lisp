@@ -169,7 +169,7 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 func str(srcLike bool, args ...Expr) string {
 	var buf strings.Builder
 	for i, arg := range args {
-		if i > 0 {
+		if i > 0 && srcLike {
 			buf.WriteByte(' ')
 		}
 		exprWriteTo(&buf, arg, srcLike)

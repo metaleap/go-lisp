@@ -435,6 +435,9 @@ func stdKeyword(args []Expr) (Expr, error) {
 	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
+	if kw, is := args[0].(ExprKeyword); is {
+		return kw, nil
+	}
 	str, err := checkIs[ExprStr](args[0])
 	if err != nil {
 		return nil, err
@@ -511,14 +514,20 @@ func stdHashmapDel(args []Expr) (Expr, error) {
 		return hashmap, nil
 	}
 	keys_to_delete := args[1:]
-	if err := checkAre[ExprStr](keys_to_delete...); err != nil {
-		return nil, err
-	}
 
 	new_hashmap := make(ExprHashMap, len(hashmap)-len(keys_to_delete))
 	for k, v := range hashmap {
-		if !slices.ContainsFunc(keys_to_delete, func(it Expr) bool { return it.(ExprStr) == ExprStr(k) }) {
+		if !slices.ContainsFunc(keys_to_delete, func(it Expr) bool {
+			str, _, err_it := checkIsStrOrKeyword(it)
+			if err_it != nil {
+				err = err_it
+			}
+			return str == string(k)
+		}) {
 			new_hashmap[k] = v
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	return new_hashmap, nil

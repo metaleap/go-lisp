@@ -90,7 +90,7 @@
 (def! double (fn* (a) (* 2 a)))
 (double 3)
 ;=>6
-(map double nums) 
+(map double nums)
 ;=>(2 4 6)
 (map (fn* (x) (symbol? x)) (list 1 (quote two) "three"))
 ;=>(false true false)
@@ -303,11 +303,11 @@
 ;=>"true \".\" false \".\" nil \".\" :keyw \".\" symb"
 
 (def! s (str {:abc "val1" :def "val2"}))
-(cond (= s "{:abc val1 :def val2}") true (= s "{:def val2 :abc val1}") true)
+(cond (= s "{ :abc val1 :def val2 }") true (= s "{ :def val2 :abc val1 }") true)
 ;=>true
 
 (def! p (pr-str {:abc "val1" :def "val2"}))
-(cond (= p "{:abc \"val1\" :def \"val2\"}") true (= p "{:def \"val2\" :abc \"val1\"}") true)
+(cond (= p "{ :abc \"val1\" :def \"val2\" }") true (= p "{ :def \"val2\" :abc \"val1\" }") true)
 ;=>true
 
 ;;

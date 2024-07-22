@@ -4,14 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 )
-
-func exprToString(expr Expr, srcLike bool) string {
-	var buf strings.Builder
-	exprWriteTo(&buf, expr, srcLike)
-	return buf.String()
-}
 
 type Writer interface {
 	io.StringWriter
