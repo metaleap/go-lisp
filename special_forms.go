@@ -213,11 +213,7 @@ func stdQuasiQuote(env *Env, args []Expr) (*Env, Expr, error) {
 	if unquote, ok, err := isListStartingWithIdent(args[0], exprIdentUnquote, 2); err != nil {
 		return nil, nil, err
 	} else if ok {
-		if unquoted, err := evalAndApply(env, unquote[1]); err != nil {
-			return nil, nil, err
-		} else {
-			return nil, unquoted, nil
-		}
+		return env, unquote[1], nil
 	}
 
 	expr := make(ExprList, 0, len(list))

@@ -10,9 +10,10 @@ var malCompat = (os.Getenv("MAL_COMPAT") != "")
 func makeCompatibleWithMAL() {
 	// simple aliases: special-forms
 	for mals, ours := range map[ExprIdent]ExprIdent{
-		"def!": "def",
-		"fn*":  "fn",
-		"try*": "try",
+		"def!":       "def",
+		"fn*":        "fn",
+		"try*":       "try",
+		"quasiquote": "quasiQuote",
 	} {
 		it := specialForms[ours]
 		if specialForms[mals] = it; it == nil {
