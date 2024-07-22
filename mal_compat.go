@@ -78,8 +78,7 @@ func makeCompatibleWithMAL() {
 			for i := 1; i < len(bindings); i += 2 {
 				rewritten = append(rewritten, ExprList{bindings[i-1], bindings[i]})
 			}
-			args[0] = (ExprList)(rewritten)
-			return stdLet(env, args)
+			return stdLet(env, append([]Expr{(ExprList)(rewritten)}, args[1:]...))
 		}),
 
 		"cond": SpecialForm(func(env *Env, args []Expr) (*Env, Expr, error) { // dont have that as a macro due to github.com/kanaka/mal/issues/655
