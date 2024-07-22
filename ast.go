@@ -117,12 +117,10 @@ func isListOrVec(seq Expr) bool {
 	return (ty == reflect.TypeFor[ExprList]()) || (ty == reflect.TypeFor[ExprVec]())
 }
 
-func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (_ []Expr, _ bool, err error) {
-	if list, _ := maybeList.(ExprList); len(list) > 0 {
+func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (list []Expr, doesListStartWithIdent bool, err error) {
+	if list, _ = maybeList.(ExprList); len(list) > 0 {
 		if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
-			if err = checkArgsCount(mustHaveLen, mustHaveLen, list); err == nil {
-				return list, true, nil
-			}
+			doesListStartWithIdent, err = true, checkArgsCount(mustHaveLen, mustHaveLen, list)
 		}
 	}
 	return

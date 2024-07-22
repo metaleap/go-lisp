@@ -98,8 +98,18 @@ func makeCompatibleWithMAL() {
 			if err := checkArgsCount(2, 2, args); err != nil {
 				return nil, nil, err
 			}
-			if _, is, _ := isListStartingWithIdent(args[1], "fn*", -1); is {
-				args[1].(ExprList)[0] = exprIdentMacro
+			if list, is, _ := isListStartingWithIdent(args[1], "fn*", -1); is {
+				list[0] = exprIdentMacro
+			} else if ident, err := checkIs[ExprIdent](args[1]); err != nil {
+				return nil, nil, fmt.Errorf("expected `(fn* ...)` instead of `%s`", str(true, args[1]))
+			} else if found, err := env.get(ident); err != nil {
+				return nil, nil, err
+			} else if fn, err := checkIs[*ExprFn](found); err != nil {
+				return nil, nil, err
+			} else {
+				copy := *fn
+				copy.isMacro = true
+				args[1] = &copy
 			}
 			return stdDef(env, args)
 		}),
@@ -114,6 +124,8 @@ func makeCompatibleWithMAL() {
 }
 
 const srcMiniStdlibMalCompat = `
+(def *host-language* "go-lisp")
+
 (def nil :nil)
 (def true :true)
 (def false :false)
