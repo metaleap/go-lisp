@@ -56,7 +56,7 @@ func makeCompatibleWithMAL() {
 			for i := 1; i < len(bindings); i += 2 {
 				rewritten = append(rewritten, ExprList{bindings[i-1], bindings[i]})
 			}
-			args[0] = ExprList(rewritten)
+			args[0] = (ExprList)(rewritten)
 			return stdLet(env, args)
 		}),
 
