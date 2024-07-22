@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -57,6 +58,9 @@ var (
 		"quit":         ExprFunc(stdQuit),
 		"exit":         ExprFunc(stdQuit),
 		"time-ms":      ExprFunc(stdTimeMs),
+		"bool":         ExprFunc(stdBool),
+		"seq":          ExprFunc(stdSeq),
+		"conj":         ExprFunc(stdConj),
 	}}
 )
 
@@ -205,12 +209,22 @@ func stdIs(args []Expr) (Expr, error) {
 		if _, ok = args[1].(*ExprFn); !ok {
 			_, ok = args[1].(ExprFunc)
 		}
+	case ":macro":
+		if fn, _ := args[1].(*ExprFn); fn != nil {
+			ok = fn.isMacro
+		}
 	case ":err":
 		_, ok = args[1].(ExprErr)
 	case ":atom":
 		_, ok = args[1].(*ExprAtom)
+	case ":nil":
+		ok = (isEq(exprNil, args[1]))
+	case ":true":
+		ok = (isEq(exprTrue, args[1]))
+	case ":false":
+		ok = (isEq(exprFalse, args[1]))
 	default:
-		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:keyword`, `:atom`, `:err`", kind)
+		return nil, fmt.Errorf("expected not `%s` but one of: `:list`, `:ident`, `:str`, `:num`, `:vec`, `:hashmap`, `:fn`, `:macro`, `:keyword`, `:atom`, `:err`, `:nil`, `:true`, `:false`", kind)
 	}
 	return exprBool(ok), nil
 }
@@ -661,4 +675,47 @@ func stdQuit(args []Expr) (Expr, error) {
 
 func stdTimeMs(args []Expr) (Expr, error) {
 	return ExprNum(time.Now().UnixMilli()), nil
+}
+
+func stdBool(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	return exprBool((!isEq(exprFalse, args[0])) && !isEq(exprNil, args[0])), nil
+}
+
+func stdSeq(args []Expr) (Expr, error) {
+	if err := checkArgsCount(1, 1, args); err != nil {
+		return nil, err
+	}
+	if isEq(exprNil, args[0]) {
+		return args[0], nil
+	}
+	switch it := args[0].(type) {
+	case ExprList:
+		if len(it) == 0 {
+			return exprNil, nil
+		}
+		return it, nil
+	case ExprVec:
+		if len(it) == 0 {
+			return exprNil, nil
+		}
+		return (ExprList)(it), nil
+	case ExprStr:
+		if len(it) == 0 {
+			return exprNil, nil
+		}
+		expr := make(ExprList, 0, len(it))
+		for _, char := range it {
+			expr = append(expr, ExprStr(char))
+		}
+		return expr, nil
+	}
+
+	return nil, fmt.Errorf("expected a list, vector, string or :nil instead of `%s`", str(true, args[0]))
+}
+
+func stdConj(args []Expr) (Expr, error) {
+	return nil, errors.New("TODO")
 }

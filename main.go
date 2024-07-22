@@ -114,7 +114,7 @@ const srcMiniStdlibMacros = `
 
 (def or
 	(macro (any1 any2)
-		´(if ~any1 :true ~any2)))
+		´(if ~any1 ~any1 ~any2)))
 
 (def postfix ;;; turns (1 2 +) into (+ 1 2)
 	(macro (call)
