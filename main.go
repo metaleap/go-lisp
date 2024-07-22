@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-var malCompat = (os.Getenv("MAL_COMPAT") != "")
-
 func main() {
 	// load in the mini-stdlib
 	if !disableTcoFuncs {
@@ -97,10 +95,6 @@ const srcMiniStdlibNonMacros = `
 			()
 			(cons (func (first list)) (map func (rest list))))))
 
-(def condBrokenUseCaseOf
-	(macro (& xs)
-		(if (> (count xs) 0)
-			(list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw "odd number of forms to cond")) (cons 'cond (rest (rest xs)))))))
 `
 
 const srcMiniStdlibMacros = `

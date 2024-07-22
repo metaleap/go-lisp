@@ -95,10 +95,6 @@ func stdDo(env *Env, args []Expr) (tailEnv *Env, expr Expr, err error) {
 }
 
 func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
-	if malCompat {
-		panic("TODO")
-	}
-
 	if err := checkArgsCount(2, -1, args); err != nil {
 		return nil, nil, err
 	}
