@@ -8,13 +8,6 @@ import (
 )
 
 func main() {
-	defer func() {
-		if crashed := recover(); crashed != nil {
-			println(strings.Join(stackTrace, "\n"))
-			fmt.Fprintf(os.Stderr, "%v", crashed)
-		}
-	}()
-
 	// load in the mini-stdlib
 	if !disableTcoFuncs {
 		if _, err := readAndEval("(" + string(exprIdentDo) + " " + srcMiniStdlibMacros + "\n" + string(exprNil) + ")"); err != nil {

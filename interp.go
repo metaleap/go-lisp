@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-const disableTcoFuncs = true // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
-const disableTracing = false || !disableTcoFuncs
+const disableTcoFuncs = false // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
+const disableTracing = true || !disableTcoFuncs
 
 // to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below that are referring to `id`.
 // another way: run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal

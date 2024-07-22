@@ -22,6 +22,7 @@ func makeCompatibleWithMAL() {
 
 	// simple aliases: std funcs
 	for mals, ours := range map[ExprIdent]ExprIdent{
+		"prn":         "print",
 		"read-string": "readExpr",
 		"readline":    "readLine",
 		"atom":        "atomFrom",
@@ -82,7 +83,9 @@ func makeCompatibleWithMAL() {
 }
 
 const srcMiniStdlibMalCompat = `
-
+(def nil :nil)
+(def true :true)
+(def false :false)
 
 (def checker
 	(fn (tag)

@@ -184,6 +184,9 @@ func stdCount(args []Expr) (Expr, error) {
 	}
 	list, err := checkIsSeq(args[0])
 	if err != nil {
+		if isEq(args[0], exprNil) {
+			return ExprNum(0), nil
+		}
 		return nil, err
 	}
 	return ExprNum(len(list)), nil

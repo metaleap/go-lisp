@@ -57,7 +57,7 @@ func (me *ExprFn) envWith(args []Expr) (*Env, error) {
 	}
 	if me.isVariadic {
 		the_var_args := args[len(me.params)-1:]
-		args = append(args[:len(me.params)-1], (ExprList)(the_var_args))
+		args = append(append(make([]Expr, 0, len(me.params)-1+len(the_var_args)), args[:len(me.params)-1]...), (ExprList)(the_var_args))
 	}
 	return newEnv(me.env, me.params, args), nil
 }
@@ -169,7 +169,7 @@ func isEq(arg1 Expr, arg2 Expr) bool {
 func str(srcLike bool, args ...Expr) string {
 	var buf strings.Builder
 	for i, arg := range args {
-		if i > 0 && srcLike {
+		if i > 0 {
 			buf.WriteByte(' ')
 		}
 		exprWriteTo(&buf, arg, srcLike)
