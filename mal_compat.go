@@ -24,6 +24,8 @@ func makeCompatibleWithMAL() {
 	for mals, ours := range map[ExprIdent]ExprIdent{
 		"prn":         "print",
 		"read-string": "readExpr",
+		"slurp":       "readTextFile",
+		"load-file":   "loadFile",
 		"readline":    "readLine",
 		"atom":        "atomFrom",
 		"deref":       "atomGet",
@@ -31,6 +33,7 @@ func makeCompatibleWithMAL() {
 		"swap!":       "atomSwap",
 		"empty?":      "isEmpty",
 		"get":         "hashmapGet",
+		"*ARGV*":      "osArgs",
 	} {
 		it := envMain.Map[ours]
 		if envMain.Map[mals] = it; it == nil {
@@ -91,12 +94,20 @@ const srcMiniStdlibMalCompat = `
 	(fn (tag)
 		(fn (arg) (is tag arg))))
 
-(def list? (checker :list))
+
 (def symbol? (checker :ident))
+(def keyword? (checker :keyword))
+(def string? (checker :str))
+(def number? (checker :num))
+(def list? (checker :list))
 (def vector? (checker :vec))
 (def map? (checker :hashmap))
-
-
+(def fn? (checker :fn))
+(def macro? (checker :macro))
+(def atom? (checker :atom))
+(def nil? (checker :nil))
+(def true? (checker :true))
+(def false? (checker :false))
 
 
 `

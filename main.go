@@ -18,13 +18,14 @@ func main() {
 		panic(err)
 	}
 
+	addOsArgsToEnv()
+
 	if malCompat {
 		makeCompatibleWithMAL()
 	}
 
 	// check if we are to run the REPL or run a specified source file
 	if len(os.Args) > 1 { // run the specified source file and exit
-		addOsArgsToEnv()
 		if _, err := readAndEval(fmt.Sprintf("(loadFile %q)", os.Args[1])); err != nil {
 			panic(err)
 		}
@@ -58,11 +59,13 @@ func readAndEval(str string) (Expr, error) {
 }
 
 func addOsArgsToEnv() {
-	args := make(ExprList, 0, len(os.Args)-2)
-	for _, arg := range os.Args[2:] {
-		args = append(args, ExprStr(arg))
+	if len(os.Args) > 1 {
+		args := make(ExprList, 0, len(os.Args)-2)
+		for _, arg := range os.Args[2:] {
+			args = append(args, ExprStr(arg))
+		}
+		envMain.set("osArgs", args)
 	}
-	envMain.set("osArgs", args)
 }
 
 const srcMiniStdlibNonMacros = `
