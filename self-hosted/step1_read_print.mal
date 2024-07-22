@@ -1,28 +1,28 @@
 ;; read
-(def READ readExpr)
+(def! READ read-string)
 
 
 ;; eval
-(def EVAL (fn [ast]
+(def! EVAL (fn* [ast]
   ast))
 
 ;; print
-(def PRINT str)
+(def! PRINT pr-str)
 
 ;; repl
-(def rep (fn [strng]
+(def! rep (fn* [strng]
   (PRINT (EVAL (READ strng)))))
 
 ;; repl loop
-(def repl-loop (fn [line]
+(def! repl-loop (fn* [line]
   (if line
     (do
       (if (not (= "" line))
-        (try
+        (try*
           (println (rep line))
-          (catch exc
+          (catch* exc
             (println "Uncaught exception:" exc))))
-      (repl-loop (readLine "mal-user> "))))))
+      (repl-loop (readline "mal-user> "))))))
 
 ;; main
 (repl-loop "")

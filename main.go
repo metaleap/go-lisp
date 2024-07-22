@@ -18,6 +18,8 @@ func main() {
 		panic(err)
 	}
 
+	makeCompatibleWithMAL()
+
 	// check if we are to run the REPL or run a specified source file
 	if len(os.Args) > 1 { // run the specified source file and exit
 		addOsArgsToEnv()

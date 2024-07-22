@@ -24,3 +24,27 @@ func readUntil(r io.Reader, until byte, initialBufCapacity int) (string, error) 
 	line := string(buf)
 	return line, nil
 }
+
+func makeCompatibleWithMAL() {
+	for mals, ours := range map[ExprIdent]ExprIdent{
+		"def!": "def",
+		"fn*":  "fn",
+		"try*": "try",
+	} {
+		it := specialForms[ours]
+		if specialForms[mals] = it; it == nil {
+			panic("mixed sth up huh?")
+		}
+	}
+
+	for mals, ours := range map[ExprIdent]ExprIdent{
+		"pr-str":      "str",
+		"read-string": "readExpr",
+		"readline":    "readLine",
+	} {
+		it := envMain.Map[ours]
+		if envMain.Map[mals] = it; it == nil {
+			panic("mixed sth up huh?")
+		}
+	}
+}

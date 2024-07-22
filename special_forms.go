@@ -274,7 +274,10 @@ func stdTryCatch(env *Env, args []Expr) (*Env, Expr, error) {
 	if err != nil {
 		return nil, nil, err
 	} else if !ok {
-		return nil, nil, fmt.Errorf("expected `(catch theErr exprHandlingIt)` as the last form in `try` , instead of `%s`", str(true, args[1]))
+		catch, ok, _ = isListStartingWithIdent(args[1], "catch*", 3) // MAL compat for testing `./self-hosted/*.mal`s
+		if !ok {
+			return nil, nil, fmt.Errorf("expected `(catch theErr exprHandlingIt)` as the last form in `try` , instead of `%s`", str(true, args[1]))
+		}
 	}
 
 	expr, err := evalAndApply(env, args[0])
