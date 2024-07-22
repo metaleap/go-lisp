@@ -6,9 +6,12 @@ import (
 	"strings"
 )
 
-var malCompat = (os.Getenv("MAL_COMPAT") != "")
+var (
+	malCompat = (os.Getenv("MAL_COMPAT") != "")
+	malMeta   = map[Expr]Expr{}
+)
 
-func makeCompatibleWithMAL() {
+func ensureMALCompatibility() {
 	// simple aliases: special-forms
 	for mals, ours := range map[ExprIdent]ExprIdent{
 		"def!":        "def",
@@ -43,6 +46,7 @@ func makeCompatibleWithMAL() {
 		"contains?":   "hashmapHas",
 		"keys":        "hashmapKeys",
 		"vals":        "hashmapVals",
+		"symbol":      "ident",
 	} {
 		it := envMain.Map[ours]
 		if envMain.Map[mals] = it; it == nil {
@@ -61,6 +65,20 @@ func makeCompatibleWithMAL() {
 				exprWriteTo(&buf, arg, true)
 			}
 			return ExprStr(buf.String()), nil
+		}),
+		"with-meta": ExprFunc(func(args []Expr) (Expr, error) {
+			if len(args) > 1 {
+				malMeta[args[0]] = args[1]
+			}
+			return args[0], nil
+		}),
+		"meta": ExprFunc(func(args []Expr) (Expr, error) {
+			if len(args) > 0 {
+				if meta := malMeta[args[0]]; meta != nil {
+					return meta, nil
+				}
+			}
+			return exprNil, nil
 		}),
 	} {
 		envMain.Map[name] = expr
@@ -94,7 +112,7 @@ func makeCompatibleWithMAL() {
 		}),
 
 		"defmacro!": SpecialForm(func(env *Env, args []Expr) (*Env, Expr, error) {
-			if err := checkArgsCount(2, 2, args); err != nil {
+			if err := checkArgsCount(2, 2, "`defmacro!`", args); err != nil {
 				return nil, nil, err
 			}
 			if list, is, _ := isListStartingWithIdent(args[1], "fn*", -1); is {

@@ -4,8 +4,9 @@ import (
 	"fmt"
 )
 
-const disableTcoFuncs = false // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
+const disableTcoFuncs = true // caution: if `true`, cannot def `macro`s; this bool is just for quick temporary via-REPL trouble-shootings to see if TCO got somehow broken (or to enable call tracing for trouble-shooting)
 const disableTracing = true || !disableTcoFuncs
+const fakeFuncNamesForDebugging = false // costly but can aid the occasional trouble-shooting
 
 // to confirm TCO still works, uncomment the 2 commented lines in `evalAndApply` below that are referring to `id`.
 // another way: run `(sum2 10000000 0)` with TCO disabled (stack overflow) and then re-enabled (no stack overflow), where `sum2` is in github.com/kanaka/mal/blob/master/impls/tests/step5_tco.mal
@@ -31,6 +32,10 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 				}
 			} else {
 				trace(true, func() string { return str(true, it) })
+				maybe_ident, _ := it[0].(ExprIdent)
+				if fakeFuncNamesForDebugging && maybe_ident == "" {
+					maybe_ident = ExprIdent(str(true, it))
+				}
 				expr, err = evalExpr(env, it)
 				if err != nil {
 					return nil, err
@@ -46,6 +51,9 @@ func evalAndApply(env *Env, expr Expr) (Expr, error) {
 					trace(false, func() string { return fmt.Sprintf("RET<<<%s", str(true, expr)) })
 					env = nil
 				case *ExprFn:
+					if (fn.nameMaybe == "") && (maybe_ident != "") {
+						fn.nameMaybe = "`" + string(maybe_ident) + "`"
+					}
 					expr = fn.body
 					env, err = fn.envWith(args)
 					if err != nil {

@@ -119,7 +119,7 @@ func stdList(args []Expr) (Expr, error) {
 }
 
 func stdIs(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`is`", args); err != nil {
 		return nil, err
 	}
 	kind, err := checkIs[ExprKeyword](args[0])
@@ -179,7 +179,7 @@ func stdIsEmpty(args []Expr) (Expr, error) {
 }
 
 func stdCount(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`count`", args); err != nil {
 		return nil, err
 	}
 	list, err := checkIsSeq(args[0])
@@ -193,7 +193,7 @@ func stdCount(args []Expr) (Expr, error) {
 }
 
 func stdEq(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`=`", args); err != nil {
 		return nil, err
 	}
 	return exprBool(isEq(args[0], args[1])), nil
@@ -236,7 +236,7 @@ func stdGe(args []Expr) (Expr, error) {
 }
 
 func stdReadExpr(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`readExpr`", args); err != nil {
 		return nil, err
 	}
 	src, err := checkIs[ExprStr](args[0])
@@ -247,7 +247,7 @@ func stdReadExpr(args []Expr) (Expr, error) {
 }
 
 func stdReadTextFile(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`readTextFile`", args); err != nil {
 		return nil, err
 	}
 	file_path, err := checkIs[ExprStr](args[0])
@@ -262,20 +262,20 @@ func stdReadTextFile(args []Expr) (Expr, error) {
 }
 
 func stdEval(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`eval`", args); err != nil {
 		return nil, err
 	}
 	return evalAndApply(&envMain, args[0])
 }
 
 func stdAtomFrom(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`atomFrom`", args); err != nil {
 		return nil, err
 	}
 	return &ExprAtom{Ref: args[0]}, nil
 }
 func stdAtomGet(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`atomGet`", args); err != nil {
 		return nil, err
 	}
 	atom, err := checkIs[*ExprAtom](args[0])
@@ -285,7 +285,7 @@ func stdAtomGet(args []Expr) (Expr, error) {
 	return atom.Ref, nil
 }
 func stdAtomSet(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`atomSet`", args); err != nil {
 		return nil, err
 	}
 	atom, err := checkIs[*ExprAtom](args[0])
@@ -296,7 +296,7 @@ func stdAtomSet(args []Expr) (Expr, error) {
 	return atom.Ref, nil
 }
 func stdAtomSwap(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, -1, args); err != nil {
+	if err := checkArgsCount(2, -1, "`atomSwap`", args); err != nil {
 		return nil, err
 	}
 	atom, err := checkIs[*ExprAtom](args[0])
@@ -306,6 +306,9 @@ func stdAtomSwap(args []Expr) (Expr, error) {
 	call_args := append([]Expr{atom.Ref}, args[2:]...)
 	switch fn := args[1].(type) {
 	case *ExprFn:
+		if fakeFuncNamesForDebugging && (fn.nameMaybe == "") {
+			fn.nameMaybe = str(true, append(ExprList{ExprIdent("atomSwap")}, args...))
+		}
 		atom.Ref, err = fn.Call(call_args)
 	case ExprFunc:
 		atom.Ref, err = fn(call_args)
@@ -319,7 +322,7 @@ func stdAtomSwap(args []Expr) (Expr, error) {
 }
 
 func stdCons(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`cons`", args); err != nil {
 		return nil, err
 	}
 	list, err := checkIsSeq(args[1])
@@ -342,7 +345,7 @@ func stdConcat(args []Expr) (Expr, error) {
 }
 
 func stdVec(args []Expr) (Expr, error) {
-	if err := checkArgsCount(0, 1, args); err != nil {
+	if err := checkArgsCount(0, 1, "`vec`", args); err != nil {
 		return nil, err
 	}
 	if len(args) == 0 {
@@ -359,7 +362,7 @@ func stdVec(args []Expr) (Expr, error) {
 }
 
 func stdListAt(args []Expr) (Expr, error) {
-	err := checkArgsCount(2, 3, args)
+	err := checkArgsCount(2, 3, "`at`", args)
 	if err != nil {
 		return nil, err
 	}
@@ -408,14 +411,14 @@ func stdListAt(args []Expr) (Expr, error) {
 }
 
 func stdError(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`error`", args); err != nil {
 		return nil, err
 	}
 	return ExprErr{It: args[0]}, nil
 }
 
 func stdThrow(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`throw`", args); err != nil {
 		return nil, err
 	}
 	expr_err, is := args[0].(ExprErr)
@@ -426,7 +429,7 @@ func stdThrow(args []Expr) (Expr, error) {
 }
 
 func stdIdent(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`ident`", args); err != nil {
 		return nil, err
 	}
 	str, err := checkIs[ExprStr](args[0])
@@ -440,7 +443,7 @@ func stdIdent(args []Expr) (Expr, error) {
 }
 
 func stdKeyword(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`keyword`", args); err != nil {
 		return nil, err
 	}
 	if kw, is := args[0].(ExprKeyword); is {
@@ -476,7 +479,7 @@ func stdHashmap(args []Expr) (Expr, error) {
 }
 
 func stdHashmapHas(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`hashmapHas`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -492,7 +495,7 @@ func stdHashmapHas(args []Expr) (Expr, error) {
 }
 
 func stdHashmapGet(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "`hashmapGet`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -511,7 +514,7 @@ func stdHashmapGet(args []Expr) (Expr, error) {
 }
 
 func stdHashmapDel(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, -1, args); err != nil {
+	if err := checkArgsCount(1, -1, "`hashmapDel`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -542,7 +545,7 @@ func stdHashmapDel(args []Expr) (Expr, error) {
 }
 
 func stdHashmapSet(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, -1, args); err != nil {
+	if err := checkArgsCount(1, -1, "`hashmapSet`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -567,7 +570,7 @@ func stdHashmapSet(args []Expr) (Expr, error) {
 }
 
 func stdHashmapKeys(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`hashmapKeys`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -582,7 +585,7 @@ func stdHashmapKeys(args []Expr) (Expr, error) {
 }
 
 func stdHashmapVals(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`hashmapVals`", args); err != nil {
 		return nil, err
 	}
 	hashmap, err := checkIs[ExprHashMap](args[0])
@@ -597,7 +600,7 @@ func stdHashmapVals(args []Expr) (Expr, error) {
 }
 
 func stdApply(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, -1, args); err != nil {
+	if err := checkArgsCount(2, -1, "`apply`", args); err != nil {
 		return nil, err
 	}
 	args_final_list, err := checkIsSeq(args[len(args)-1])
@@ -608,6 +611,9 @@ func stdApply(args []Expr) (Expr, error) {
 
 	switch fn := args[0].(type) {
 	case *ExprFn:
+		if fakeFuncNamesForDebugging && (fn.nameMaybe == "") {
+			fn.nameMaybe = str(true, append(ExprList{ExprIdent("apply")}, args...))
+		}
 		return fn.Call(args_list)
 	case ExprFunc:
 		return fn(args_list)
@@ -617,7 +623,7 @@ func stdApply(args []Expr) (Expr, error) {
 }
 
 func stdReadLine(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`readLine`", args); err != nil {
 		return nil, err
 	}
 	prompt, err := checkIs[ExprStr](args[0])
@@ -647,21 +653,21 @@ func stdQuit(args []Expr) (Expr, error) {
 }
 
 func stdTimeMs(args []Expr) (Expr, error) {
-	if err := checkArgsCount(0, 0, args); err != nil {
+	if err := checkArgsCount(0, 0, "`timeMs`", args); err != nil {
 		return nil, err
 	}
 	return ExprNum(time.Now().UnixMilli()), nil
 }
 
 func stdBool(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`bool`", args); err != nil {
 		return nil, err
 	}
 	return exprBool(!isNilOrFalse(args[0])), nil
 }
 
 func stdSeq(args []Expr) (Expr, error) {
-	if err := checkArgsCount(1, 1, args); err != nil {
+	if err := checkArgsCount(1, 1, "`seq`", args); err != nil {
 		return nil, err
 	}
 	if isEq(exprNil, args[0]) {
@@ -693,7 +699,7 @@ func stdSeq(args []Expr) (Expr, error) {
 }
 
 func stdConj(args []Expr) (Expr, error) {
-	if err := checkArgsCount(2, -1, args); err != nil {
+	if err := checkArgsCount(2, -1, "`conj`", args); err != nil {
 		return nil, err
 	}
 	_, is_vec := args[0].(ExprVec)

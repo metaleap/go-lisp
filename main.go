@@ -21,7 +21,7 @@ func main() {
 	addOsArgsToEnv()
 
 	if malCompat {
-		makeCompatibleWithMAL()
+		ensureMALCompatibility()
 	}
 
 	// check if we are to run the REPL or run a specified source file
@@ -58,16 +58,6 @@ func readAndEval(str string) (Expr, error) {
 	return evalAndApply(&envMain, expr)
 }
 
-func addOsArgsToEnv() {
-	if len(os.Args) > 1 {
-		args := make(ExprList, 0, len(os.Args)-2)
-		for _, arg := range os.Args[2:] {
-			args = append(args, ExprStr(arg))
-		}
-		envMain.set("osArgs", args)
-	}
-}
-
 const srcMiniStdlibNonMacros = `
 
 
@@ -78,12 +68,12 @@ const srcMiniStdlibNonMacros = `
 (def nth at)
 
 (def first
-	(fn (list)
-		(at list 0)))
+	(fn (lst)
+		(at lst 0)))
 
 (def rest
-	(fn (list)
-		(at list 1 -1)))
+	(fn (lst)
+		(at lst 1 -1)))
 
 (def loadFile
 	(fn (srcFilePath)
@@ -93,10 +83,10 @@ const srcMiniStdlibNonMacros = `
 		(eval expr)))
 
 (def map
-	(fn (func list)
-		(if (isEmpty list)
+	(fn (func lst)
+		(if (isEmpty lst)
 			()
-			(cons (func (first list)) (map func (rest list))))))
+			(cons (func (first lst)) (map func (rest lst))))))
 
 `
 

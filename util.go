@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 )
 
@@ -27,15 +28,15 @@ func readUntil(r io.Reader, until byte, initialBufCapacity int) (string, error) 
 	return line, nil
 }
 
-func checkArgsCount(wantAtLeast int, wantAtMost int, have []Expr) error {
+func checkArgsCount(wantAtLeast int, wantAtMost int, name string, have []Expr) error {
 	if wantAtLeast < 0 {
 		return nil
 	} else if want_exactly := wantAtLeast; (want_exactly == wantAtMost) && (want_exactly != len(have)) {
-		return fmt.Errorf("expected %d arg(s), not %d", want_exactly, len(have))
+		return fmt.Errorf("%s expects %d arg(s), not %d", name, want_exactly, len(have))
 	} else if len(have) < wantAtLeast {
-		return fmt.Errorf("expected at least %d arg(s), not %d", wantAtLeast, len(have))
+		return fmt.Errorf("%s expects at least %d arg(s), not %d", name, wantAtLeast, len(have))
 	} else if (wantAtMost > wantAtLeast) && (len(have) > wantAtMost) {
-		return fmt.Errorf("expected %d to %d arg(s), not %d", wantAtLeast, wantAtMost, len(have))
+		return fmt.Errorf("%s expects %d to %d arg(s), not %d", name, wantAtLeast, wantAtMost, len(have))
 	}
 	return nil
 }
@@ -65,7 +66,7 @@ func checkAreBoth[T1 Expr, T2 Expr](have []Expr, exactArgsCount bool) (ret1 T1, 
 	if exactArgsCount {
 		max_args_count = 2
 	}
-	if err = checkArgsCount(2, max_args_count, have); err != nil {
+	if err = checkArgsCount(2, max_args_count, "operator", have); err != nil {
 		return
 	}
 	if ret1, err = checkIs[T1](have[0]); err != nil {
@@ -94,10 +95,21 @@ func checkIsSeq(expr Expr) ([]Expr, error) {
 	case ExprVec:
 		return ([]Expr)(expr), nil
 	default:
+		// panic("WHOIS")
 		return nil, fmt.Errorf("expected list or vector, not %T", expr)
 	}
 }
 
 func newErrNotCallable(expr Expr) error {
 	return fmt.Errorf("not callable: `%s`", str(true, expr))
+}
+
+func addOsArgsToEnv() {
+	if len(os.Args) > 1 {
+		args := make(ExprList, 0, len(os.Args)-2)
+		for _, arg := range os.Args[2:] {
+			args = append(args, ExprStr(arg))
+		}
+		envMain.set("osArgs", args)
+	}
 }

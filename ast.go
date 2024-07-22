@@ -45,6 +45,7 @@ type ExprFn struct { // if it weren't for TCO, just the above `ExprFunc` would s
 	env        *Env
 	isMacro    bool
 	isVariadic bool
+	nameMaybe  string
 }
 
 func (me *ExprFn) envWith(args []Expr) (*Env, error) {
@@ -52,7 +53,10 @@ func (me *ExprFn) envWith(args []Expr) (*Env, error) {
 	if me.isVariadic {
 		num_args_min, num_args_max = len(me.params)-1, -1
 	}
-	if err := checkArgsCount(num_args_min, num_args_max, args); err != nil {
+	if err := checkArgsCount(num_args_min, num_args_max, strings.TrimSpace("function "+me.nameMaybe), args); err != nil {
+		if me.nameMaybe == "" && fakeFuncNamesForDebugging {
+			panic("WHOIS")
+		}
 		return nil, err
 	}
 	if me.isVariadic {
@@ -96,7 +100,7 @@ func exprStrOrKeyword(s string) Expr {
 }
 
 func compare(args []Expr) (int, error) {
-	if err := checkArgsCount(2, 2, args); err != nil {
+	if err := checkArgsCount(2, 2, "comparer", args); err != nil {
 		return 0, err
 	}
 	switch it := args[0].(type) {
@@ -120,7 +124,7 @@ func isListOrVec(seq Expr) bool {
 func isListStartingWithIdent(maybeList Expr, ident ExprIdent, mustHaveLen int) (list []Expr, doesListStartWithIdent bool, err error) {
 	if list, _ = maybeList.(ExprList); len(list) > 0 {
 		if maybe_ident, _ := list[0].(ExprIdent); maybe_ident == ident {
-			doesListStartWithIdent, err = true, checkArgsCount(mustHaveLen, mustHaveLen, list)
+			doesListStartWithIdent, err = true, checkArgsCount(mustHaveLen, mustHaveLen, "form `"+string(ident)+"`", list)
 		}
 	}
 	return
