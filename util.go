@@ -4,6 +4,10 @@ import (
 	"io"
 )
 
+func isNilOrFalse(expr Expr) bool {
+	return isEq(exprNil, expr) || isEq(exprFalse, expr)
+}
+
 func readUntil(r io.Reader, until byte, initialBufCapacity int) (string, error) {
 	buf := make([]byte, 0, initialBufCapacity)
 	var b [1]byte

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -667,13 +666,19 @@ func stdReadLine(args []Expr) (Expr, error) {
 func stdQuit(args []Expr) (Expr, error) {
 	var exit_code ExprNum
 	if len(args) > 0 {
-		exit_code, _ = args[0].(ExprNum)
+		var is_num bool
+		if exit_code, is_num = args[0].(ExprNum); (!is_num) || (exit_code > 255) {
+			exit_code = 255
+		}
 	}
 	os.Exit(int(exit_code))
 	return exprNil, nil
 }
 
 func stdTimeMs(args []Expr) (Expr, error) {
+	if err := checkArgsCount(0, 0, args); err != nil {
+		return nil, err
+	}
 	return ExprNum(time.Now().UnixMilli()), nil
 }
 
@@ -681,7 +686,7 @@ func stdBool(args []Expr) (Expr, error) {
 	if err := checkArgsCount(1, 1, args); err != nil {
 		return nil, err
 	}
-	return exprBool((!isEq(exprFalse, args[0])) && !isEq(exprNil, args[0])), nil
+	return exprBool(!isNilOrFalse(args[0])), nil
 }
 
 func stdSeq(args []Expr) (Expr, error) {
@@ -717,5 +722,22 @@ func stdSeq(args []Expr) (Expr, error) {
 }
 
 func stdConj(args []Expr) (Expr, error) {
-	return nil, errors.New("TODO")
+	if err := checkArgsCount(2, -1, args); err != nil {
+		return nil, err
+	}
+	_, is_vec := args[0].(ExprVec)
+	seq, err := checkIsSeq(args[0])
+	if err != nil {
+		return nil, err
+	}
+	if is_vec {
+		seq = append(seq, args[1:]...)
+		return (ExprVec)(seq), nil
+	} else {
+		new_list := make(ExprList, 0, (len(args)-1)+len(seq))
+		for i := len(args) - 1; i > 0; i-- {
+			new_list = append(new_list, args[i])
+		}
+		return (ExprList)(append(new_list, seq...)), nil
+	}
 }

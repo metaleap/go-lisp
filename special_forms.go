@@ -30,6 +30,11 @@ func init() { // in here, instead of above, to avoid "initialization cycle" erro
 	}
 }
 
+// like the funcs in `std.go`, the special-forms return an `Expr, error`. but:
+// in addition, they also return an `*Env`. if that is `nil`, the returned Expr
+// is a complete result, just like with the std funcs. but if not, the TCO loop
+// in `evalAndApply` goes through another iteration with the returned Expr.
+
 func stdDef(env *Env, args []Expr) (*Env, Expr, error) {
 	return defOrSet(true, env, args)
 }
@@ -123,15 +128,18 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 }
 
 func stdIf(env *Env, args []Expr) (*Env, Expr, error) {
-	if err := checkArgsCount(3, 3, args); err != nil {
+	if err := checkArgsCount(2, 3, args); err != nil {
 		return nil, nil, err
+	}
+	if len(args) < 3 {
+		args = append(args, exprNil)
 	}
 	expr, err := evalAndApply(env, args[0])
 	if err != nil {
 		return nil, nil, err
 	}
 	idx := 1
-	if isEq(expr, exprFalse) || isEq(expr, exprNil) {
+	if isNilOrFalse(expr) {
 		idx = 2
 	}
 	return env, args[idx], nil

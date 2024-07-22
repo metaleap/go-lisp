@@ -1,4 +1,5 @@
 ; run with: `rlwrap go run *.go hello.lisp` or `rlwrap go run *.go hello.lisp World`
+; — or load this in a REPL session started with `rlwrap go run *.go` by calling `(loadFile "hello.lisp")`
 
 (def greet
     (fn (name)
@@ -7,7 +8,7 @@
         (if (= "" name)
             (set repeat :false)
             (println "Hello, " name "!"))
-        (if repeat (greet :nil) :nil)))
+        (if repeat (greet :nil))))
 
 (if (isEmpty osArgs)
     (greet :nil)
