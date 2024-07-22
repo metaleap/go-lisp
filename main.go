@@ -68,12 +68,12 @@ const srcMiniStdlibNonMacros = `
 (def nth at)
 
 (def first
-	(fn (lst)
-		(at lst 0)))
+	(fn (list)
+		(at list 0)))
 
 (def rest
-	(fn (lst)
-		(at lst 1 -1)))
+	(fn (list)
+		(at list 1 -1)))
 
 (def loadFile
 	(fn (srcFilePath)
@@ -83,10 +83,10 @@ const srcMiniStdlibNonMacros = `
 		(eval expr)))
 
 (def map
-	(fn (func lst)
-		(if (isEmpty lst)
+	(fn (func list)
+		(if (isEmpty list)
 			()
-			(cons (func (first lst)) (map func (rest lst))))))
+			(cons (func (first list)) (map func (rest list))))))
 
 `
 

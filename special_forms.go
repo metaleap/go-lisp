@@ -108,7 +108,7 @@ func stdLet(env *Env, args []Expr) (*Env, Expr, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err = checkArgsCount(2, 2, "`let`", pair); err != nil {
+		if err = checkArgsCount(2, 2, "a `let` pairing", pair); err != nil {
 			return nil, nil, err
 		}
 		name, err := checkIs[ExprIdent](pair[0])

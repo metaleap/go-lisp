@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 )
 
 func isNilOrFalse(expr Expr) bool {
@@ -44,9 +43,6 @@ func checkArgsCount(wantAtLeast int, wantAtMost int, name string, have []Expr) e
 func checkIs[T Expr](have Expr) (T, error) {
 	ret, ok := have.(T)
 	if !ok {
-		if reflect.TypeOf(ret) == reflect.TypeFor[*ExprFn]() {
-			panic("WHOIS?")
-		}
 		return ret, fmt.Errorf("expected %T, not %T", ret, have)
 	}
 	return ret, nil
@@ -95,7 +91,6 @@ func checkIsSeq(expr Expr) ([]Expr, error) {
 	case ExprVec:
 		return ([]Expr)(expr), nil
 	default:
-		// panic("WHOIS")
 		return nil, fmt.Errorf("expected list or vector, not %T", expr)
 	}
 }

@@ -54,9 +54,6 @@ func (me *ExprFn) envWith(args []Expr) (*Env, error) {
 		num_args_min, num_args_max = len(me.params)-1, -1
 	}
 	if err := checkArgsCount(num_args_min, num_args_max, strings.TrimSpace("function "+me.nameMaybe), args); err != nil {
-		if me.nameMaybe == "" && fakeFuncNamesForDebugging {
-			panic("WHOIS")
-		}
 		return nil, err
 	}
 	if me.isVariadic {
